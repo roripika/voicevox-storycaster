@@ -20,11 +20,13 @@ class BaseLLMClient:
     model: str
 
     def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:  # pragma: no cover - interface only
+        """Return the assistant response given system and user prompts."""
         raise NotImplementedError
 
 
 class OpenAIClient(BaseLLMClient):
     def __post_init__(self) -> None:
+        """Initialise the OpenAI client."""
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise LLMClientError(
@@ -40,6 +42,7 @@ class OpenAIClient(BaseLLMClient):
         self._client = OpenAI()
 
     def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:
+        """Request a chat completion from OpenAI."""
         resp = self._client.chat.completions.create(
             model=self.model,
             messages=[
@@ -54,6 +57,7 @@ class OpenAIClient(BaseLLMClient):
 
 class AnthropicClient(BaseLLMClient):
     def __post_init__(self) -> None:
+        """Initialise the Anthropic Claude client."""
         try:
             from anthropic import Anthropic  # type: ignore
         except Exception as exc:  # noqa: BLE001
@@ -68,6 +72,7 @@ class AnthropicClient(BaseLLMClient):
         self._client = Anthropic()
 
     def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:
+        """Request a Claude response and return plain text."""
         # Anthropic は system prompt を.messagesに含める必要がある
         resp = self._client.messages.create(
             model=self.model,
@@ -87,6 +92,7 @@ class AnthropicClient(BaseLLMClient):
 
 class GeminiClient(BaseLLMClient):
     def __post_init__(self) -> None:
+        """Initialise the Google Gemini client."""
         try:
             import google.generativeai as genai  # type: ignore
             from google.generativeai.types import GenerationConfig  # type: ignore
@@ -105,6 +111,7 @@ class GeminiClient(BaseLLMClient):
         self._model = genai.GenerativeModel(self.model)
 
     def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:
+        """Request a Gemini response and return plain text."""
         prompt = f"[SYSTEM]\n{system}\n\n[USER]\n{user}"
         generation_config = self._GenerationConfig(max_output_tokens=max_tokens)
         response = self._model.generate_content(
@@ -116,6 +123,7 @@ class GeminiClient(BaseLLMClient):
 
 
 def create_llm_client(provider: str, model: str) -> BaseLLMClient:
+    """Factory helper that returns an LLM client for the given provider."""
     provider = provider.lower().strip()
     if provider in {"openai", "gpt"}:
         client = OpenAIClient(model=model)

@@ -62,11 +62,12 @@ PUBLICATION_FORBIDDEN = [
 
 
 def normalise(text: str) -> str:
+    """Replace full-width spaces with ASCII spaces for consistent parsing."""
     return text.replace("\u3000", " ")
 
 
 def find_snippet(text: str, keyword: str) -> str:
-    # Return the sentence (roughly) containing the keyword.
+    """Return a brief sentence that contains the supplied ``keyword``."""
     text = normalise(text)
     for segment in re.split(r"[\n。!?]\s*", text):
         if keyword in segment:
@@ -75,6 +76,7 @@ def find_snippet(text: str, keyword: str) -> str:
 
 
 def detect_status(info: PolicyInfo) -> None:
+    """Populate commercial/credit/publication status fields based on policy text."""
     text = info.policy
     norm = normalise(text)
 
@@ -141,6 +143,7 @@ def detect_status(info: PolicyInfo) -> None:
 
 
 def load_speaker_map(json_path: Path) -> Dict[str, Dict[str, List[str]]]:
+    """Load exported speaker/style data into a convenient lookup map."""
     data = json.loads(json_path.read_text(encoding="utf-8"))
     speaker_map: Dict[str, Dict[str, List[str]]] = {}
     for entry in data:
@@ -154,6 +157,7 @@ def load_speaker_map(json_path: Path) -> Dict[str, Dict[str, List[str]]]:
 
 
 def analyse(speaker_map: Dict[str, Dict[str, List[str]]], info_dir: Path) -> List[PolicyInfo]:
+    """Combine speaker metadata with policy JSON files to build policy info objects."""
     items: List[PolicyInfo] = []
     for path in sorted(info_dir.glob("*.json")):
         uuid = path.stem
@@ -176,7 +180,9 @@ def analyse(speaker_map: Dict[str, Dict[str, List[str]]], info_dir: Path) -> Lis
 
 
 def render_markdown(items: List[PolicyInfo]) -> str:
+    """Render the analysed policy information into a Markdown report."""
     def bullet_list(title: str, condition) -> str:
+        """Render a bullet section listing entries that match ``condition``."""
         matches = [x for x in items if condition(x)]
         if not matches:
             return ""
@@ -239,6 +245,7 @@ def render_markdown(items: List[PolicyInfo]) -> str:
 
 
 def main() -> None:
+    """CLI entry point that analyses policy text and writes Markdown output."""
     parser = argparse.ArgumentParser(description="Summarise VOICEVOX speaker usage policies")
     parser.add_argument(
         "--speakers-json",

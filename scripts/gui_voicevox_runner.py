@@ -71,6 +71,7 @@ def safe_name(value: str) -> str:
 
 
 def load_settings() -> dict[str, str]:
+    """Load saved LLM provider/model settings or return defaults."""
     default = {"provider": "openai", "model": "gpt-4o-mini"}
     try:
         if CONFIG_PATH.exists():
@@ -86,6 +87,7 @@ def load_settings() -> dict[str, str]:
 
 
 def save_settings(provider: str, model: str) -> None:
+    """Write provider and model selections to disk."""
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.write_text(
         json.dumps({"provider": provider, "model": model}, ensure_ascii=False, indent=2),
@@ -94,10 +96,12 @@ def save_settings(provider: str, model: str) -> None:
 
 
 def _is_package_installed(package: str) -> bool:
+    """Return True if the given package can be resolved via import machinery."""
     return importlib.util.find_spec(package) is not None
 
 
 def check_provider_status(provider: str) -> tuple[bool, list[str], bool]:
+    """Check whether required packages and API keys exist for the provider."""
     req = PROVIDER_REQUIREMENTS.get(provider, {})
     packages = req.get("packages", [])
     env_vars = req.get("env_vars", [])
@@ -107,6 +111,7 @@ def check_provider_status(provider: str) -> tuple[bool, list[str], bool]:
 
 
 def install_packages(packages: list[str]) -> bool:
+    """Install the supplied pip ``packages`` and invalidate import caches thereafter."""
     if not packages:
         return True
     try:
@@ -126,6 +131,7 @@ def install_packages(packages: list[str]) -> bool:
 
 class VoicevoxGUI(tk.Tk):
     def __init__(self) -> None:
+        """Initialise the main GUI window and load persisted settings."""
         super().__init__()
         self.title("VOICEVOX 自動朗読ツール")
         self.geometry("700x520")
@@ -161,6 +167,7 @@ class VoicevoxGUI(tk.Tk):
         self.run_button.pack(side="right")
 
     def run_pipeline(self) -> None:
+        """Collect the pasted text and spawn the processing thread."""
         text = self.text_widget.get("1.0", tk.END).strip()
         if not text:
             messagebox.showwarning("入力エラー", "テキストを入力してください。")
@@ -184,6 +191,7 @@ class VoicevoxGUI(tk.Tk):
         ).start()
 
     def _run_pipeline_thread(self, novel_path: Path, assignments_path: Path, output_dir: Path) -> None:
+        """Background worker that handles synthesis and post-processing."""
         try:
             if not is_engine_running():
                 self._update_status("VOICEVOX Engine を起動しています...")
@@ -245,12 +253,14 @@ class VoicevoxGUI(tk.Tk):
             self.run_button.config(state="normal")
 
     def _update_status(self, text: str) -> None:
+        """Update the status label from worker threads in a safe manner."""
         def setter() -> None:
             self.status_var.set(text)
 
         self.after(0, setter)
 
     def _open_folder(self, path: Path) -> None:
+        """Open the folder containing generated files using the host OS."""
         if sys.platform == "darwin":  # macOS
             subprocess.Popen(["open", str(path)])
         elif sys.platform.startswith("linux"):
@@ -259,12 +269,15 @@ class VoicevoxGUI(tk.Tk):
             subprocess.Popen(["explorer", str(path)])
 
     def _update_settings_label(self) -> None:
+        """Refresh the label showing which LLM is currently selected."""
         self.settings_var.set(f"利用中の LLM: {self.llm_provider} / {self.llm_model}")
 
     def open_settings(self) -> None:
+        """Display the settings dialog."""
         SettingsWindow(self)
 
     def apply_settings(self, provider: str, model: str) -> None:
+        """Persist new settings and update the UI."""
         self.llm_provider = provider
         self.llm_model = model
         self._update_settings_label()
@@ -273,6 +286,7 @@ class VoicevoxGUI(tk.Tk):
 
 class SettingsWindow(tk.Toplevel):
     def __init__(self, parent: VoicevoxGUI) -> None:
+        """Instantiate the settings dialog bound to the main GUI."""
         super().__init__(parent)
         self.title("設定")
         self.resizable(False, False)
@@ -309,11 +323,13 @@ class SettingsWindow(tk.Toplevel):
         self._update_status_and_controls()
 
     def _populate_models(self, provider: str) -> None:
+        """Populate the listbox with model choices for the given provider."""
         self.model_listbox.delete(0, tk.END)
         for model in MODEL_CHOICES.get(provider, []):
             self.model_listbox.insert(tk.END, model)
 
     def _select_current_model(self) -> None:
+        """Select the current model in the listbox if present."""
         current = self.model_var.get()
         items = self.model_listbox.get(0, tk.END)
         if current in items:
@@ -322,6 +338,7 @@ class SettingsWindow(tk.Toplevel):
             self.model_listbox.see(idx)
 
     def _on_provider_change(self, *_args) -> None:
+        """Handle provider change events and update dependent widgets."""
         provider = self.provider_var.get()
         self._populate_models(provider)
         # Reset selection if current model not in list
@@ -333,11 +350,13 @@ class SettingsWindow(tk.Toplevel):
         self._update_status_and_controls()
 
     def _on_model_select(self, _event) -> None:
+        """Keep the model entry in sync with listbox selections."""
         selection = self.model_listbox.curselection()
         if selection:
             self.model_var.set(self.model_listbox.get(selection[0]))
 
     def _apply(self) -> None:
+        """Save the chosen provider/model back to the parent window."""
         provider = self.provider_var.get()
         model = self.model_var.get().strip()
         if not provider:
@@ -350,6 +369,7 @@ class SettingsWindow(tk.Toplevel):
         self.destroy()
 
     def _update_status_and_controls(self) -> None:
+        """Update status text and button states according to requirement checks."""
         provider = self.provider_var.get()
         ok, missing_pkgs, has_env = check_provider_status(provider)
         messages = []
@@ -366,6 +386,7 @@ class SettingsWindow(tk.Toplevel):
         self.install_button.config(state="normal" if missing_pkgs else tk.DISABLED)
 
     def _install_missing(self) -> None:
+        """Install any missing packages for the selected provider."""
         provider = self.provider_var.get()
         req = PROVIDER_REQUIREMENTS.get(provider, {})
         missing_pkgs = [pkg for pkg in req.get("packages", []) if not _is_package_installed(pkg)]
@@ -384,6 +405,7 @@ class SettingsWindow(tk.Toplevel):
 
 
 def main() -> None:
+    """Launch the GUI application, warning if prerequisites are missing."""
     if not AUTO_ASSIGN.exists():
         messagebox.showerror("エラー", "scripts/auto_assign_voicevox.py が見つかりません。リポジトリ直下で実行してください。")
         return
@@ -394,6 +416,7 @@ def main() -> None:
 
 
 def is_engine_running(host: str = "127.0.0.1", port: int = 50021) -> bool:
+    """Return True when the VOICEVOX Engine responds on the given host/port."""
     url = f"http://{host}:{port}/speakers"
     try:
         with urllib.request.urlopen(url, timeout=2):
@@ -403,6 +426,7 @@ def is_engine_running(host: str = "127.0.0.1", port: int = 50021) -> bool:
 
 
 def start_engine() -> bool:
+    """Attempt to start the VOICEVOX Engine via the bundled script."""
     if not ENGINE_START.exists():
         return False
     try:

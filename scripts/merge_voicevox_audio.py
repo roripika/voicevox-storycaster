@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 def build_concat_file(manifest: list[dict], workdir: Path) -> Path:
+    """Create a temporary concat list file for ffmpeg based on the manifest."""
     lines = []
     for entry in manifest:
         file_path = entry.get("file")
@@ -31,6 +32,7 @@ def build_concat_file(manifest: list[dict], workdir: Path) -> Path:
 
 
 def run_ffmpeg(concat_file: Path, output_path: Path) -> None:
+    """Execute ffmpeg concat to merge WAV files listed in ``concat_file``."""
     cmd = [
         "ffmpeg",
         "-y",
@@ -49,6 +51,7 @@ def run_ffmpeg(concat_file: Path, output_path: Path) -> None:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse CLI arguments for the merge helper script."""
     parser = argparse.ArgumentParser(description="Merge VOICEVOX manifest audio into one wav")
     parser.add_argument("--manifest", required=True, help="output/artifacts/manifest.json のパス")
     parser.add_argument("--out", required=True, help="出力するファイルパス (例: output/novel.wav)")
@@ -57,6 +60,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Entry point: read manifest, build concat file, and merge audio."""
     args = parse_args()
     manifest_path = Path(args.manifest)
     if not manifest_path.exists():
@@ -81,4 +85,3 @@ if __name__ == "__main__":
         main()
     except subprocess.CalledProcessError as exc:
         sys.exit(exc.returncode)
-

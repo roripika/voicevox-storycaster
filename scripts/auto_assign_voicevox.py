@@ -52,6 +52,7 @@ class VoicevoxSpeaker:
 
 
 def read_text_segment(path: Path, max_chars: int) -> str:
+    """Read UTF-8 text and truncate to ``max_chars`` characters when positive."""
     text = path.read_text(encoding="utf-8")
     if max_chars > 0:
         return text[:max_chars]
@@ -59,10 +60,12 @@ def read_text_segment(path: Path, max_chars: int) -> str:
 
 
 def normalise_ws(text: str) -> str:
+    """Normalize whitespace by collapsing runs and stripping surrounding spaces."""
     return re.sub(r"\s+", " ", text.strip())
 
 
 def extract_characters(client: OpenAIClient, text: str, max_characters: int) -> List[CharacterCandidate]:
+    """Use the configured LLM to extract character candidates from the text sample."""
     system = (
         "あなたは小説の登場人物を分析してJSONのみを返すアシスタントです。"
         "必ず有効なJSON配列だけを出力し、説明文は書かないでください。"
@@ -110,6 +113,7 @@ def extract_characters(client: OpenAIClient, text: str, max_characters: int) -> 
 
 
 def load_voicevox_speakers(profiles_path: Path, speakers_json_path: Path) -> List[VoicevoxSpeaker]:
+    """Load available VOICEVOX speakers and styles from cached metadata files."""
     profile_map: Dict[str, Dict[str, str]] = {}
     if profiles_path.exists():
         profiles_data = yaml.safe_load(profiles_path.read_text(encoding="utf-8"))
@@ -156,6 +160,7 @@ def map_characters_to_voices(
     speakers: List[VoicevoxSpeaker],
     max_tokens: int = 2000,
 ) -> List[Dict[str, str]]:
+    """Ask the LLM to choose the most suitable VOICEVOX voice for each character."""
     system = (
         "あなたは小説キャラクターに対して、適切なVOICEVOX話者とスタイルを割り当てるアシスタントです。"
         "出力は必ずJSON配列のみ。説明文は禁止です。"
@@ -223,6 +228,7 @@ def build_assignments_yaml(
     narration_style_id: Optional[int] = None,
     narration_speaker: Optional[str] = None,
 ) -> None:
+    """Persist the aggregated mapping into a VOICEVOX assignments YAML file."""
     # Create lookup for candidate info
     char_lookup = {c.name: c for c in characters}
 
@@ -298,6 +304,7 @@ def build_assignments_yaml(
 
 
 def run_novel_to_voicevox(novel_path: Path, assignments_path: Path, model: str, outdir: Path) -> None:
+    """Invoke the secondary pipeline to synthesise audio clips using the generated YAML."""
     cmd = [
         sys.executable,
         str(Path(__file__).parent / "novel_to_voicevox.py"),
@@ -319,6 +326,7 @@ def run_novel_to_voicevox(novel_path: Path, assignments_path: Path, model: str, 
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line options for the auto assignment workflow."""
     parser = argparse.ArgumentParser(description="Auto-assign VOICEVOX voices based on novel characters")
     parser.add_argument("--input", required=True, help="小説テキスト (UTF-8)")
     parser.add_argument("--assignments-out", default="config/voice_assignments_auto.yaml", help="生成するYAMLの出力先")
@@ -347,6 +355,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    """Run the full auto-assignment and optional synthesis pipeline."""
     args = parse_args()
 
     if "OPENAI_API_KEY" not in os.environ:

@@ -19,21 +19,25 @@ def eprint(*args, **kwargs):
 
 
 def read_text(path: Path) -> str:
+    """Read UTF-8 text from ``path``."""
     return path.read_text(encoding="utf-8")
 
 
 def write_bytes(path: Path, data: bytes):
+    """Write binary ``data`` to ``path`` creating parent directories as needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "wb") as f:
         f.write(data)
 
 
 def write_text(path: Path, text: str):
+    """Write UTF-8 ``text`` to ``path`` creating parent directories as needed."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
 
 
 def load_yaml(path: Path):
+    """Read a YAML file and return its contents."""
     try:
         import yaml  # type: ignore
     except Exception as exc:
@@ -44,6 +48,7 @@ def load_yaml(path: Path):
 
 
 def normalize_name(name: str) -> str:
+    """Return a normalised version of a speaker name for fuzzy matching."""
     # Lowercase-like normalization, remove spaces and punctuation for fuzzy mapping
     s = name.strip()
     s = s.replace("\u3000", " ")
@@ -54,6 +59,7 @@ def normalize_name(name: str) -> str:
 
 
 def chunk_text(text: str, approx_chars: int = 4000):
+    """Yield the supplied text split into blocks around ``approx_chars`` characters."""
     # Split by paragraphs to keep boundaries, then group until reaching approx_chars
     paras = re.split(r"\n\n+", text)
     chunk = []
@@ -74,6 +80,7 @@ def chunk_text(text: str, approx_chars: int = 4000):
 
 
 def build_prompt(allowed_names, narration_label: str, sample_count: int = 3) -> str:
+    """Return an LLM prompt instructing the assistant to tag dialogue/narration lines."""
     names_str = ", ".join(allowed_names)
     sample = (
         "{"
@@ -102,6 +109,7 @@ def build_prompt(allowed_names, narration_label: str, sample_count: int = 3) -> 
 
 
 def call_llm_attribution(client, allowed_names, narration_label: str, chunk_text: str, system_note: str) -> list:
+    """Call the LLM to attribute each line in ``chunk_text`` to a speaker."""
     prompt = build_prompt(allowed_names, narration_label)
     user_prompt = (
         f"[SYSTEM NOTE]\n{system_note}\n\n"
@@ -134,6 +142,7 @@ def call_llm_attribution(client, allowed_names, narration_label: str, chunk_text
 
 
 def voicevox_audio_query(host: str, port: int, text: str, style_id: int) -> dict:
+    """Call VOICEVOX Engine to create an audio query payload for a piece of text."""
     url = f"http://{host}:{port}/audio_query?speaker={style_id}&text={urllib.parse.quote(text)}"
     req = urllib.request.Request(url, method="POST")
     req.add_header("Content-Type", "application/json")
@@ -145,6 +154,7 @@ def voicevox_audio_query(host: str, port: int, text: str, style_id: int) -> dict
 
 
 def voicevox_synthesis(host: str, port: int, style_id: int, query: dict) -> bytes:
+    """Send the audio query to VOICEVOX Engine and return synthesised audio bytes."""
     url = f"http://{host}:{port}/synthesis?speaker={style_id}"
     data = json.dumps(query).encode("utf-8")
     req = urllib.request.Request(url, method="POST", data=data)
@@ -157,6 +167,7 @@ def voicevox_synthesis(host: str, port: int, style_id: int, query: dict) -> byte
 
 
 def apply_overrides_to_query(query: dict, overrides: dict) -> dict:
+    """Overlay user overrides onto a VOICEVOX audio query."""
     # Apply known top-level adjustments if provided
     keys = [
         "speedScale",
@@ -174,6 +185,7 @@ def apply_overrides_to_query(query: dict, overrides: dict) -> dict:
 
 
 def ensure_engine_up(host: str, port: int) -> None:
+    """Exit the program if VOICEVOX Engine is unreachable."""
     url = f"http://{host}:{port}/speakers"
     try:
         with urllib.request.urlopen(url, timeout=10) as resp:
@@ -184,6 +196,7 @@ def ensure_engine_up(host: str, port: int) -> None:
 
 
 def main():
+    """Entry point for the attribution + synthesis pipeline."""
     ap = argparse.ArgumentParser(description="Assign novel lines to speakers via LLM and synthesize with VOICEVOX.")
     ap.add_argument("--input", required=True, help="Input novel text file (UTF-8)")
     ap.add_argument("--assignments", default="config/voice_assignments.yaml", help="Character→style_id config YAML")
