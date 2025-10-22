@@ -3,6 +3,13 @@
 - ワンクリックセットアップや GUI を用意し、初心者でも迷わず使えるようにしました。
 - CLI や追加ツールも揃えているので、上級者は詳細なカスタマイズが可能です。
 
+**対応OS / 動作条件**
+- macOS 12 以降（Apple Silicon / Intel 両対応）
+- Linux（Ubuntu 20.04 以降で検証済み。他ディストロでも基本的に動作）
+- Windows 10 1903 以降 / Windows 11（WSL2 + Ubuntu + WSLg 必須）
+  - `SetupWSL.ps1` → `SetupVoicevoxEnvironment_win.ps1` → `RunVoicevoxGUI_win.ps1` の順に実行
+  - WSL が利用できない Windows では PowerShell 版スクリプトへの移植が必要になるため、現状サポート対象外です。
+
 ---
 
 **クイックスタート（初心者向け）**
