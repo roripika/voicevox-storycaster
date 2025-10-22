@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
 import re
 import subprocess
@@ -45,6 +46,20 @@ MODEL_CHOICES = {
         "gemini-pro",
     ],
 }
+PROVIDER_REQUIREMENTS = {
+    "openai": {
+        "packages": ["openai"],
+        "env_vars": ["OPENAI_API_KEY"],
+    },
+    "anthropic": {
+        "packages": ["anthropic"],
+        "env_vars": ["ANTHROPIC_API_KEY"],
+    },
+    "gemini": {
+        "packages": ["google-generativeai"],
+        "env_vars": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    },
+}
 
 
 def safe_name(value: str) -> str:
@@ -75,6 +90,30 @@ def save_settings(provider: str, model: str) -> None:
         json.dumps({"provider": provider, "model": model}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+
+
+def _is_package_installed(package: str) -> bool:
+    return importlib.util.find_spec(package) is not None
+
+
+def check_provider_status(provider: str) -> tuple[bool, list[str], bool]:
+    req = PROVIDER_REQUIREMENTS.get(provider, {})
+    packages = req.get("packages", [])
+    env_vars = req.get("env_vars", [])
+    missing_pkgs = [pkg for pkg in packages if not _is_package_installed(pkg)]
+    has_env = any(os.environ.get(var) for var in env_vars) if env_vars else True
+    return (not missing_pkgs and has_env, missing_pkgs, has_env)
+
+
+def install_packages(packages: list[str]) -> bool:
+    if not packages:
+        return True
+    try:
+        cmd = [sys.executable, "-m", "pip", "install", *packages]
+        subprocess.run(cmd, check=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 class VoicevoxGUI(tk.Tk):
@@ -248,12 +287,18 @@ class SettingsWindow(tk.Toplevel):
 
         btn_frame = tk.Frame(self)
         btn_frame.grid(row=5, column=0, columnspan=2, pady=10)
+        self.status_label = tk.Label(self, text="", fg="#555555")
+        self.status_label.grid(row=6, column=0, columnspan=2, padx=10, pady=(0, 8), sticky="w")
+
+        self.install_button = tk.Button(btn_frame, text="必要なパッケージをインストール", command=self._install_missing)
+        self.install_button.pack(side="left", padx=5)
         tk.Button(btn_frame, text="完了", command=self._apply).pack(side="left", padx=5)
         tk.Button(btn_frame, text="キャンセル", command=self.destroy).pack(side="left", padx=5)
 
         self.grid_columnconfigure(1, weight=1)
         self._populate_models(self.provider_var.get())
         self._select_current_model()
+        self._update_status_and_controls()
 
     def _populate_models(self, provider: str) -> None:
         self.model_listbox.delete(0, tk.END)
@@ -277,6 +322,7 @@ class SettingsWindow(tk.Toplevel):
             if default_list:
                 self.model_var.set(default_list[0])
                 self._select_current_model()
+        self._update_status_and_controls()
 
     def _on_model_select(self, _event) -> None:
         selection = self.model_listbox.curselection()
@@ -294,6 +340,37 @@ class SettingsWindow(tk.Toplevel):
             return
         self.parent.apply_settings(provider, model)
         self.destroy()
+
+    def _update_status_and_controls(self) -> None:
+        provider = self.provider_var.get()
+        ok, missing_pkgs, has_env = check_provider_status(provider)
+        messages = []
+        if missing_pkgs:
+            messages.append("未インストール: " + ", ".join(missing_pkgs))
+        if not has_env:
+            req_env = PROVIDER_REQUIREMENTS.get(provider, {}).get("env_vars", [])
+            if req_env:
+                messages.append("APIキー未設定: " + "または".join(req_env))
+        if not messages:
+            self.status_label.config(text="必要な依存関係は満たされています。", fg="#2e7d32")
+        else:
+            self.status_label.config(text="; ".join(messages), fg="#b71c1c")
+        self.install_button.config(state="normal" if missing_pkgs else tk.DISABLED)
+
+    def _install_missing(self) -> None:
+        provider = self.provider_var.get()
+        req = PROVIDER_REQUIREMENTS.get(provider, {})
+        missing_pkgs = [pkg for pkg in req.get("packages", []) if not _is_package_installed(pkg)]
+        if not missing_pkgs:
+            self._update_status_and_controls()
+            return
+        self.install_button.config(state=tk.DISABLED)
+        self.status_label.config(text="パッケージをインストールしています...", fg="#555555")
+        self.update_idletasks()
+        success = install_packages(missing_pkgs)
+        if not success:
+            messagebox.showerror("インストール失敗", "パッケージのインストールに失敗しました。ターミナルで手動実行を試してください。", parent=self)
+        self._update_status_and_controls()
 
 
 def main() -> None:
