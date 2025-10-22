@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import importlib
 import importlib.util
 import os
 import re
@@ -110,9 +111,16 @@ def install_packages(packages: list[str]) -> bool:
         return True
     try:
         cmd = [sys.executable, "-m", "pip", "install", *packages]
-        subprocess.run(cmd, check=True)
+        result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # Invalidate import caches so newly installed packages can be detected immediately
+        importlib.invalidate_caches()
+        for pkg in packages:
+            if pkg in sys.modules:
+                del sys.modules[pkg]
         return True
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as exc:
+        print(exc.stdout)
+        print(exc.stderr, file=sys.stderr)
         return False
 
 
@@ -370,6 +378,8 @@ class SettingsWindow(tk.Toplevel):
         success = install_packages(missing_pkgs)
         if not success:
             messagebox.showerror("インストール失敗", "パッケージのインストールに失敗しました。ターミナルで手動実行を試してください。", parent=self)
+        else:
+            messagebox.showinfo("インストール完了", "必要なパッケージをインストールしました。", parent=self)
         self._update_status_and_controls()
 
 
