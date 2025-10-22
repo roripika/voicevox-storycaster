@@ -48,18 +48,14 @@ MODEL_CHOICES = {
     ],
 }
 PROVIDER_REQUIREMENTS = {
-    "openai": {
-        "packages": ["openai"],
-        "env_vars": ["OPENAI_API_KEY"],
-    },
-    "anthropic": {
-        "packages": ["anthropic"],
-        "env_vars": ["ANTHROPIC_API_KEY"],
-    },
-    "gemini": {
-        "packages": ["google-generativeai"],
-        "env_vars": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
-    },
+    "openai": {"packages": ["openai"], "env_vars": ["OPENAI_API_KEY"]},
+    "anthropic": {"packages": ["anthropic"], "env_vars": ["ANTHROPIC_API_KEY"]},
+    "gemini": {"packages": ["google-generativeai"], "env_vars": ["GEMINI_API_KEY", "GOOGLE_API_KEY"]},
+}
+PROVIDER_ENV_PRIMARY = {
+    "openai": "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "gemini": "GEMINI_API_KEY",
 }
 
 
@@ -70,27 +66,43 @@ def safe_name(value: str) -> str:
     return value[:64]
 
 
-def load_settings() -> dict[str, str]:
-    """Load saved LLM provider/model settings or return defaults."""
-    default = {"provider": "openai", "model": "gpt-4o-mini"}
+def load_settings() -> dict[str, str | dict[str, str]]:
+    """Load saved LLM provider/model/API key settings or return defaults."""
+    default_provider = "openai"
+    default_model = "gpt-4o-mini"
+    default_keys: dict[str, str] = {}
+    for provider, meta in PROVIDER_REQUIREMENTS.items():
+        # Prefer stored key; fall back to environment
+        env_vars = meta.get("env_vars", [])
+        default_keys[provider] = ""
+        for var in env_vars:
+            if os.environ.get(var):
+                default_keys[provider] = os.environ[var]
+                break
+
     try:
         if CONFIG_PATH.exists():
             data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
             if isinstance(data, dict):
+                stored_keys = data.get("api_keys", {}) if isinstance(data.get("api_keys"), dict) else {}
+                keys = default_keys.copy()
+                keys.update({k: str(v) for k, v in stored_keys.items()})
                 return {
-                    "provider": data.get("provider", default["provider"]),
-                    "model": data.get("model", default["model"]),
+                    "provider": data.get("provider", default_provider),
+                    "model": data.get("model", default_model),
+                    "api_keys": keys,
                 }
     except Exception:
         pass
-    return default
+
+    return {"provider": default_provider, "model": default_model, "api_keys": default_keys}
 
 
-def save_settings(provider: str, model: str) -> None:
-    """Write provider and model selections to disk."""
+def save_settings(provider: str, model: str, api_keys: dict[str, str]) -> None:
+    """Write provider, model, and API keys to disk."""
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.write_text(
-        json.dumps({"provider": provider, "model": model}, ensure_ascii=False, indent=2),
+        json.dumps({"provider": provider, "model": model, "api_keys": api_keys}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
@@ -100,13 +112,13 @@ def _is_package_installed(package: str) -> bool:
     return importlib.util.find_spec(package) is not None
 
 
-def check_provider_status(provider: str) -> tuple[bool, list[str], bool]:
+def check_provider_status(provider: str, cached_key: str = "") -> tuple[bool, list[str], bool]:
     """Check whether required packages and API keys exist for the provider."""
     req = PROVIDER_REQUIREMENTS.get(provider, {})
     packages = req.get("packages", [])
     env_vars = req.get("env_vars", [])
     missing_pkgs = [pkg for pkg in packages if not _is_package_installed(pkg)]
-    has_env = any(os.environ.get(var) for var in env_vars) if env_vars else True
+    has_env = bool(cached_key) or (any(os.environ.get(var) for var in env_vars) if env_vars else True)
     return (not missing_pkgs and has_env, missing_pkgs, has_env)
 
 
@@ -137,12 +149,13 @@ class VoicevoxGUI(tk.Tk):
         self.geometry("700x520")
 
         settings = load_settings()
-        provider = settings["provider"]
-        model = settings["model"]
+        provider = settings.get("provider", "openai")
+        model = settings.get("model", "gpt-4o-mini")
         if provider not in PROVIDER_CHOICES:
             provider = "openai"
         self.llm_provider = provider
         self.llm_model = model
+        self.api_keys = {prov: settings.get("api_keys", {}).get(prov, "") for prov in PROVIDER_CHOICES}
 
         tk.Label(self, text="作品タイトル (ファイル名に使用)").pack(anchor="w", padx=10, pady=(10, 0))
         self.title_var = tk.StringVar(value="")
@@ -223,8 +236,14 @@ class VoicevoxGUI(tk.Tk):
                 "--model",
                 self.llm_model,
             ]
+            env = os.environ.copy()
+            api_key = self.api_keys.get(self.llm_provider, "")
+            if api_key:
+                env_vars = PROVIDER_REQUIREMENTS.get(self.llm_provider, {}).get("env_vars", [])
+                if env_vars:
+                    env[env_vars[0]] = api_key
             self._update_status("auto_assign_voicevox.py を実行しています...")
-            subprocess.run(cmd, check=True, cwd=REPO_ROOT)
+            subprocess.run(cmd, check=True, cwd=REPO_ROOT, env=env)
 
             manifest = output_dir / "artifacts" / "manifest.json"
             if manifest.exists():
@@ -276,12 +295,13 @@ class VoicevoxGUI(tk.Tk):
         """Display the settings dialog."""
         SettingsWindow(self)
 
-    def apply_settings(self, provider: str, model: str) -> None:
+    def apply_settings(self, provider: str, model: str, api_key: str) -> None:
         """Persist new settings and update the UI."""
         self.llm_provider = provider
         self.llm_model = model
+        self.api_keys[provider] = api_key
         self._update_settings_label()
-        save_settings(provider, model)
+        save_settings(provider, model, self.api_keys)
 
 
 class SettingsWindow(tk.Toplevel):
@@ -305,12 +325,18 @@ class SettingsWindow(tk.Toplevel):
         self.model_listbox.bind("<<ListboxSelect>>", self._on_model_select)
 
         tk.Label(self, text="モデル（カスタム入力可）").grid(row=3, column=0, padx=10, pady=(4, 0), sticky="w")
-        tk.Entry(self, textvariable=self.model_var, width=35).grid(row=4, column=0, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
+        tk.Entry(self, textvariable=self.model_var, width=35).grid(row=4, column=0, columnspan=2, padx=10, pady=(0, 6), sticky="ew")
+
+        tk.Label(self, text="APIキー").grid(row=5, column=0, padx=10, pady=(4, 0), sticky="w")
+        self.api_entry = tk.Entry(self, width=35)
+        self.api_entry.grid(row=6, column=0, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
+        self.api_entry.bind("<FocusIn>", self._api_focus_in)
+        self.api_entry.bind("<FocusOut>", self._api_focus_out)
 
         btn_frame = tk.Frame(self)
-        btn_frame.grid(row=5, column=0, columnspan=2, pady=10)
+        btn_frame.grid(row=8, column=0, columnspan=2, pady=10)
         self.status_label = tk.Label(self, text="", fg="#555555")
-        self.status_label.grid(row=6, column=0, columnspan=2, padx=10, pady=(0, 8), sticky="w")
+        self.status_label.grid(row=7, column=0, columnspan=2, padx=10, pady=(0, 8), sticky="w")
 
         self.install_button = tk.Button(btn_frame, text="必要なパッケージをインストール", command=self._install_missing)
         self.install_button.pack(side="left", padx=5)
@@ -318,8 +344,10 @@ class SettingsWindow(tk.Toplevel):
         tk.Button(btn_frame, text="キャンセル", command=self.destroy).pack(side="left", padx=5)
 
         self.grid_columnconfigure(1, weight=1)
+        self.placeholder_active = False
         self._populate_models(self.provider_var.get())
         self._select_current_model()
+        self._update_api_entry()
         self._update_status_and_controls()
 
     def _populate_models(self, provider: str) -> None:
@@ -347,6 +375,7 @@ class SettingsWindow(tk.Toplevel):
             if default_list:
                 self.model_var.set(default_list[0])
                 self._select_current_model()
+        self._update_api_entry()
         self._update_status_and_controls()
 
     def _on_model_select(self, _event) -> None:
@@ -365,13 +394,15 @@ class SettingsWindow(tk.Toplevel):
         if not model:
             messagebox.showwarning("入力エラー", "モデルを入力してください。", parent=self)
             return
-        self.parent.apply_settings(provider, model)
+        key = self._current_key_value()
+        self.parent.apply_settings(provider, model, key)
         self.destroy()
 
     def _update_status_and_controls(self) -> None:
         """Update status text and button states according to requirement checks."""
         provider = self.provider_var.get()
-        ok, missing_pkgs, has_env = check_provider_status(provider)
+        cached_key = self._current_key_value() or self.parent.api_keys.get(provider, "")
+        ok, missing_pkgs, has_env = check_provider_status(provider, cached_key=cached_key)
         messages = []
         if missing_pkgs:
             messages.append("未インストール: " + ", ".join(missing_pkgs))
@@ -402,6 +433,44 @@ class SettingsWindow(tk.Toplevel):
         else:
             messagebox.showinfo("インストール完了", "必要なパッケージをインストールしました。", parent=self)
         self._update_status_and_controls()
+
+    def _update_api_entry(self) -> None:
+        provider = self.provider_var.get()
+        stored_key = self.parent.api_keys.get(provider, "")
+        env_fallback = ""
+        for var in PROVIDER_REQUIREMENTS.get(provider, {}).get("env_vars", []):
+            if os.environ.get(var):
+                env_fallback = os.environ[var]
+                break
+        value = stored_key or env_fallback
+        if value:
+            self.placeholder_active = False
+            self.api_entry.config(fg="#000000")
+            self.api_entry.delete(0, tk.END)
+            self.api_entry.insert(0, value)
+        else:
+            self._set_placeholder()
+
+    def _set_placeholder(self) -> None:
+        self.placeholder_active = True
+        self.api_entry.config(fg="#888888")
+        self.api_entry.delete(0, tk.END)
+        self.api_entry.insert(0, "未設定")
+
+    def _api_focus_in(self, _event) -> None:
+        if self.placeholder_active:
+            self.api_entry.delete(0, tk.END)
+            self.api_entry.config(fg="#000000")
+            self.placeholder_active = False
+
+    def _api_focus_out(self, _event) -> None:
+        if not self.api_entry.get().strip():
+            self._set_placeholder()
+
+    def _current_key_value(self) -> str:
+        if self.placeholder_active:
+            return ""
+        return self.api_entry.get().strip()
 
 
 def main() -> None:
