@@ -9,10 +9,14 @@
 1. **環境セットアップ**
    - Finder から `SetupVoicevoxEnvironment.command` をダブルクリック（またはターミナルで `bash scripts/setup_voicevox_environment.sh`）。
    - Homebrew や依存ツールの導入、Python 仮想環境作成、OpenAI API キー登録、VOICEVOX Engine のインストールまでまとめて行われます。
-   - **Windows の場合**: 事前に PowerShell（管理者）で `SetupWSL.ps1` を実行し、WSL + Ubuntu を整えてから Ubuntu ターミナル上で同じ `scripts/setup_voicevox_environment.sh` を実行してください。
+   - **Windows の場合**:
+     1. 管理者 PowerShell で `SetupWSL.ps1` を実行し、WSL + Ubuntu を整備
+     2. 同じ場所で `SetupVoicevoxEnvironment_win.ps1` をダブルクリック（または `powershell -ExecutionPolicy Bypass -File SetupVoicevoxEnvironment_win.ps1`）
+     3. WSL 上で Linux と同じセットアップが自動実行されます
 2. **朗読GUIの起動**
    - `RunVoicevoxGUI.command` をダブルクリック（または `python scripts/gui_voicevox_runner.py`）。
    - 作品タイトルと本文を貼り付けて「音声生成を実行」を押すだけで、配役決定→音声生成→結合→出力フォルダ表示まで自動で実行されます。
+   - Windows の場合は `RunVoicevoxGUI_win.ps1` をダブルクリック（WSLg もしくは X サーバーが必要）。
 3. **生成物**
    - `output_gui/タイトル_タイムスタンプ/` に、行単位のWAV、結合済みWAV、動作ログ、割当YAMLが保存されます。
 4. **やり直す場合**
@@ -31,6 +35,9 @@
 - `scripts/setup_voicevox_environment.sh`: 依存ツール確認・OpenAI キー設定・VOICEVOX Engine インストールまでを自動化。
 - `SetupVoicevoxEnvironment.command`: 上記スクリプトを macOS でダブルクリック実行するランチャー。
 - `RunVoicevoxGUI.command`: GUI ランチャー。`.venv` と OpenAI キーを読み込んで `gui_voicevox_runner.py` を起動。
+- `SetupWSL.ps1`: WSL を有効化し必要パッケージを導入する Windows 用補助スクリプト。
+- `SetupVoicevoxEnvironment_win.ps1`: Windows から WSL 内で `setup_voicevox_environment.sh` を実行するランチャー。
+- `RunVoicevoxGUI_win.ps1`: Windows から WSL 上の GUI を起動するランチャー。
 - `scripts/install_voicevox_engine.sh`: VOICEVOX Engine のインストーラ。`--version` や `--auto-deps` など詳細オプションあり。
 - `bin/voicevox-engine-start`: VOICEVOX Engine 起動ヘルパー（macOS/Linux）。
 - `scripts/auto_assign_voicevox.py`: 小説→登場人物抽出→VOICEVOX割当→音声合成までの自動パイプライン（CLI）。
