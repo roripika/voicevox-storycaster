@@ -5,12 +5,14 @@ import os
 import re
 import sys
 import time
-import urllib.request
 import urllib.error
 import urllib.parse
+import urllib.request
 from pathlib import Path
 
-# Optional deps: pyyaml, openai
+# Optional deps: pyyaml
+
+from scripts.llm_client import LLMClientError, create_llm_client
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -71,59 +73,6 @@ def chunk_text(text: str, approx_chars: int = 4000):
         yield "\n\n".join(chunk)
 
 
-class OpenAIClient:
-    def __init__(self, model: str):
-        self.model = model
-        self.api_key = os.environ.get("OPENAI_API_KEY")
-        if not self.api_key:
-            eprint("OPENAI_API_KEY is not set. Export it before running.")
-            raise SystemExit(1)
-        # Try modern SDK first
-        self._modern = None
-        try:
-            from openai import OpenAI  # type: ignore
-
-            self._modern = OpenAI()
-        except Exception:
-            self._modern = None
-        if not self._modern:
-            # fallback to legacy style
-            try:
-                import openai  # type: ignore
-
-                openai.api_key = self.api_key
-                self._legacy = openai
-            except Exception as exc:
-                eprint("OpenAI Python SDK is not installed. Run: pip install openai")
-                raise SystemExit(1) from exc
-
-    def complete_jsonl(self, system_prompt: str, user_prompt: str, temperature: float = 0.2, max_tokens: int = 1500) -> str:
-        # Returns raw assistant text, expected to be JSONL only.
-        if self._modern:
-            resp = self._modern.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            return resp.choices[0].message.content or ""
-        else:
-            # legacy
-            resp = self._legacy.ChatCompletion.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            return resp["choices"][0]["message"]["content"]
-
-
 def build_prompt(allowed_names, narration_label: str, sample_count: int = 3) -> str:
     names_str = ", ".join(allowed_names)
     sample = (
@@ -152,16 +101,17 @@ def build_prompt(allowed_names, narration_label: str, sample_count: int = 3) -> 
 """
 
 
-def call_llm_attribution(client: OpenAIClient, allowed_names, narration_label: str, chunk_text: str, system_note: str) -> list:
+def call_llm_attribution(client, allowed_names, narration_label: str, chunk_text: str, system_note: str) -> list:
     prompt = build_prompt(allowed_names, narration_label)
     user_prompt = (
         f"[SYSTEM NOTE]\n{system_note}\n\n"
         f"[TEXT]\n{chunk_text}\n\n"
         f"[INSTRUCTIONS]\n上記テキストを JSON Lines で出力してください。"
     )
-    raw = client.complete_jsonl(
-        system_prompt="あなたは厳密にJSON Linesのみを出力する補助AIです。",
-        user_prompt=user_prompt,
+    raw = client.chat(
+        system="あなたは厳密にJSON Linesのみを出力する補助AIです。",
+        user=user_prompt,
+        max_tokens=1500,
     )
     lines = []
     for ln in raw.splitlines():
@@ -241,7 +191,16 @@ def main():
     ap.add_argument("--outdir", default="output", help="Output directory for audio and artifacts")
     ap.add_argument("--host", default="127.0.0.1", help="VOICEVOX Engine host")
     ap.add_argument("--port", type=int, default=50021, help="VOICEVOX Engine port")
-    ap.add_argument("--model", default=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"), help="OpenAI model name")
+    ap.add_argument(
+        "--model",
+        default=os.environ.get("LLM_MODEL") or os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        help="LLM model name",
+    )
+    ap.add_argument(
+        "--llm-provider",
+        default=os.environ.get("LLM_PROVIDER", "openai"),
+        help="LLM provider identifier (openai, anthropic など)",
+    )
     ap.add_argument("--chunk-chars", type=int, default=4000, help="Approx chars per LLM chunk")
     ap.add_argument("--dry-run", action="store_true", help="Do not call VOICEVOX, only produce JSONL assignments")
 
@@ -292,7 +251,11 @@ def main():
     text = read_text(input_path)
 
     # Prepare LLM client
-    client = OpenAIClient(model=args.model)
+    try:
+        client = create_llm_client(args.llm_provider, args.model)
+    except LLMClientError as exc:
+        eprint(str(exc))
+        raise SystemExit(1)
 
     # System note (base) + optional prompt template
     base_note = (

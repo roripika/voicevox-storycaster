@@ -15,6 +15,8 @@ from typing import Dict, List, Optional
 
 import yaml
 
+from scripts.llm_client import LLMClientError, create_llm_client
+
 
 # ---------------------------------------------------------------------------
 # Dataclasses
@@ -43,26 +45,6 @@ class VoicevoxSpeaker:
     traits: str
     generation: Optional[str]
     styles: List[VoicevoxStyle]
-
-
-class OpenAIClient:
-    def __init__(self, model: str):
-        from openai import OpenAI  # type: ignore
-
-        self.model = model
-        self.client = OpenAI()
-
-    def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:
-        resp = self.client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
-            max_tokens=max_tokens,
-            temperature=0.2,
-        )
-        return resp.choices[0].message.content or ""
 
 
 # ---------------------------------------------------------------------------
@@ -340,7 +322,16 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Auto-assign VOICEVOX voices based on novel characters")
     parser.add_argument("--input", required=True, help="小説テキスト (UTF-8)")
     parser.add_argument("--assignments-out", default="config/voice_assignments_auto.yaml", help="生成するYAMLの出力先")
-    parser.add_argument("--model", default=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"), help="OpenAIモデル名")
+    parser.add_argument(
+        "--model",
+        default=os.environ.get("LLM_MODEL") or os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        help="使用するLLMモデル名",
+    )
+    parser.add_argument(
+        "--llm-provider",
+        default=os.environ.get("LLM_PROVIDER", "openai"),
+        help="利用するLLMプロバイダ (openai, anthropic など)",
+    )
     parser.add_argument("--max-characters", type=int, default=6, help="抽出する最大キャラクター数")
     parser.add_argument("--sample-chars", type=int, default=6000, help="本文の先頭からLLMに渡す文字数 (0で全文)")
     parser.add_argument("--profiles", default="data/voicevox_speaker_profiles.yaml", help="VOICEVOX話者のプロフィールYAML")
@@ -369,7 +360,10 @@ def main() -> None:
     if not speakers_json.exists():
         raise SystemExit(f"Speakers JSON が見つかりません: {speakers_json}. scripts/export_voicevox_speakers.sh を先に実行してください。")
 
-    client = OpenAIClient(model=args.model)
+    try:
+        client = create_llm_client(args.llm_provider, args.model)
+    except LLMClientError as exc:
+        raise SystemExit(str(exc))
 
     text_segment = read_text_segment(novel_path, args.sample_chars)
     characters = extract_characters(client, text_segment, args.max_characters)

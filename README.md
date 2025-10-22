@@ -34,6 +34,8 @@
 - `bin/voicevox-engine-start`: VOICEVOX Engine 起動ヘルパー（macOS/Linux）。
 - `scripts/auto_assign_voicevox.py`: 小説→登場人物抽出→VOICEVOX割当→音声合成までの自動パイプライン（CLI）。
   - デフォルトでナレーション枠（style_id=3）を追加するので、地の文も必ず音声化されます。
+  - `--llm-provider` と `--model` で LLM を切り替え可能（例: `--llm-provider anthropic --model claude-3-haiku-20240307`）。
+- `scripts/llm_client.py`: LLM クライアントの抽象化。OpenAI / Anthropic などを容易に追加できます。
 - `scripts/novel_to_voicevox.py`: 割当済みYAMLを使って音声合成だけ行いたい場合のCLI。
 - `scripts/merge_voicevox_audio.py`: `manifest.json` をもとに ffmpeg でWAVを結合。
 - `scripts/export_voicevox_speakers.sh`: 話者/スタイル一覧を md/csv/json で出力。`--details` で `/speaker_info` も取得。
@@ -59,6 +61,7 @@
    python scripts/auto_assign_voicevox.py --input novel.txt --assignments-out config/voice_assignments_auto.yaml
    ```
    - `--skip-synthesis` を付ければ割当YAMLのみ生成。
+   - LLMを切り替える場合は `--llm-provider` / `--model` を指定（環境変数 `LLM_PROVIDER`, `LLM_MODEL` でも可）。
    - 抽出結果は `output/artifacts/extracted_characters.json`、マッピングは `output/artifacts/character_voice_mapping.json`。
 4. 既存割当を使って合成だけ実行したい場合
    ```bash
@@ -99,3 +102,4 @@
 - 対応OS: macOS / Linux（Windows は WSL を推奨）。
 - 長文は `auto_assign_voicevox.py` が自動でチャンク分割 `--chunk-chars` を調整し、順序通りに音声化します。
 - 生成された `config/voice_assignments_auto.yaml` を編集して好みの声やパラメータを微調整できます。
+- Anthropic など別サービスを使う場合は、`ANTHROPIC_API_KEY` を設定し `pip install anthropic` 後、`LLM_PROVIDER=anthropic` を指定します。
