@@ -9,6 +9,7 @@
 1. **環境セットアップ**
    - Finder から `SetupVoicevoxEnvironment.command` をダブルクリック（またはターミナルで `bash scripts/setup_voicevox_environment.sh`）。
    - Homebrew や依存ツールの導入、Python 仮想環境作成、OpenAI API キー登録、VOICEVOX Engine のインストールまでまとめて行われます。
+   - **Windows の場合**: 事前に PowerShell（管理者）で `SetupWSL.ps1` を実行し、WSL + Ubuntu を整えてから Ubuntu ターミナル上で同じ `scripts/setup_voicevox_environment.sh` を実行してください。
 2. **朗読GUIの起動**
    - `RunVoicevoxGUI.command` をダブルクリック（または `python scripts/gui_voicevox_runner.py`）。
    - 作品タイトルと本文を貼り付けて「音声生成を実行」を押すだけで、配役決定→音声生成→結合→出力フォルダ表示まで自動で実行されます。
@@ -103,3 +104,4 @@
 - 長文は `auto_assign_voicevox.py` が自動でチャンク分割 `--chunk-chars` を調整し、順序通りに音声化します。
 - 生成された `config/voice_assignments_auto.yaml` を編集して好みの声やパラメータを微調整できます。
 - Anthropic など別サービスを使う場合は、`ANTHROPIC_API_KEY` を設定し `pip install anthropic` 後、`LLM_PROVIDER=anthropic` を指定します。
+- Windows で WSL を使ってセットアップしたい場合は、管理者 PowerShell で `SetupWSL.ps1` を実行し、指示に従ってください。`-CloneRepo` オプションで WSL 上にこのリポジトリを自動クローンできます。
