@@ -85,15 +85,46 @@ class AnthropicClient(BaseLLMClient):
         return "\n".join(parts).strip()
 
 
+class GeminiClient(BaseLLMClient):
+    def __post_init__(self) -> None:
+        try:
+        import google.generativeai as genai  # type: ignore
+        from google.generativeai.types import GenerationConfig  # type: ignore
+        except Exception as exc:  # noqa: BLE001
+            raise LLMClientError(
+                "google-generativeai パッケージが見つかりません。`pip install google-generativeai` を実行してください。"
+            ) from exc
+
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            raise LLMClientError("GEMINI_API_KEY (または GOOGLE_API_KEY) が設定されていません。")
+
+        genai.configure(api_key=api_key)
+        self._genai = genai
+        self._GenerationConfig = GenerationConfig
+        self._model = genai.GenerativeModel(self.model)
+
+    def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:
+        prompt = f"[SYSTEM]\n{system}\n\n[USER]\n{user}"
+        generation_config = self._GenerationConfig(max_output_tokens=max_tokens)
+        response = self._model.generate_content(
+            prompt,
+            generation_config=generation_config,
+        )
+        # google-generativeai exposes convenience property .text
+        return (response.text or "").strip()
+
+
 def create_llm_client(provider: str, model: str) -> BaseLLMClient:
     provider = provider.lower().strip()
     if provider in {"openai", "gpt"}:
         client = OpenAIClient(model=model)
     elif provider in {"anthropic", "claude"}:
         client = AnthropicClient(model=model)
+    elif provider in {"gemini", "google"}:
+        client = GeminiClient(model=model)
     else:
         raise LLMClientError(
-            f"Unsupported LLM provider '{provider}'. 対応している値: openai, anthropic"
+            f"Unsupported LLM provider '{provider}'. 対応している値: openai, anthropic, gemini"
         )
     return client
-
