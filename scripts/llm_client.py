@@ -88,8 +88,8 @@ class AnthropicClient(BaseLLMClient):
 class GeminiClient(BaseLLMClient):
     def __post_init__(self) -> None:
         try:
-        import google.generativeai as genai  # type: ignore
-        from google.generativeai.types import GenerationConfig  # type: ignore
+            import google.generativeai as genai  # type: ignore
+            from google.generativeai.types import GenerationConfig  # type: ignore
         except Exception as exc:  # noqa: BLE001
             raise LLMClientError(
                 "google-generativeai パッケージが見つかりません。`pip install google-generativeai` を実行してください。"
