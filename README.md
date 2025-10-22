@@ -33,6 +33,7 @@
    - `RunVoicevoxGUI.command` をダブルクリック（または `python scripts/gui_voicevox_runner.py`）。
    - 作品タイトルと本文を貼り付けて「音声生成を実行」を押すだけで、配役決定→音声生成→結合→出力フォルダ表示まで自動で実行されます。
    - Windows の場合は `RunVoicevoxGUI_win.ps1` をダブルクリック（WSLg もしくは X サーバーが必要）。
+   - 画面左下の「設定」ボタンから LLM プロバイダとモデルを変更できます（OpenAI, Anthropic, Gemini など）。設定は `config/llm_settings.json` に保存され、次回起動時に復元されます。
 3. **生成物**
    - `output_gui/タイトル_タイムスタンプ/` に、行単位のWAV、結合済みWAV、動作ログ、割当YAMLが保存されます。
 4. **やり直す場合**

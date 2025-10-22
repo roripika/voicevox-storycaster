@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -22,6 +23,28 @@ AUTO_ASSIGN = REPO_ROOT / "scripts" / "auto_assign_voicevox.py"
 MERGE_SCRIPT = REPO_ROOT / "scripts" / "merge_voicevox_audio.py"
 ENGINE_START = REPO_ROOT / "bin" / "voicevox-engine-start"
 DEFAULT_OUTPUT_BASE = REPO_ROOT / "output_gui"
+CONFIG_PATH = REPO_ROOT / "config" / "llm_settings.json"
+
+PROVIDER_CHOICES = ["openai", "anthropic", "gemini"]
+MODEL_CHOICES = {
+    "openai": [
+        "gpt-4o-mini",
+        "gpt-4o",
+        "gpt-4.1-mini",
+        "gpt-4.1",
+        "gpt-3.5-turbo",
+    ],
+    "anthropic": [
+        "claude-3-haiku-20240307",
+        "claude-3-sonnet-20240229",
+        "claude-3-opus-20240229",
+    ],
+    "gemini": [
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-pro",
+    ],
+}
 
 
 def safe_name(value: str) -> str:
@@ -31,11 +54,42 @@ def safe_name(value: str) -> str:
     return value[:64]
 
 
+def load_settings() -> dict[str, str]:
+    default = {"provider": "openai", "model": "gpt-4o-mini"}
+    try:
+        if CONFIG_PATH.exists():
+            data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return {
+                    "provider": data.get("provider", default["provider"]),
+                    "model": data.get("model", default["model"]),
+                }
+    except Exception:
+        pass
+    return default
+
+
+def save_settings(provider: str, model: str) -> None:
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(
+        json.dumps({"provider": provider, "model": model}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
 class VoicevoxGUI(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("VOICEVOX 自動朗読ツール")
         self.geometry("700x520")
+
+        settings = load_settings()
+        provider = settings["provider"]
+        model = settings["model"]
+        if provider not in PROVIDER_CHOICES:
+            provider = "openai"
+        self.llm_provider = provider
+        self.llm_model = model
 
         tk.Label(self, text="作品タイトル (ファイル名に使用)").pack(anchor="w", padx=10, pady=(10, 0))
         self.title_var = tk.StringVar(value="")
@@ -49,8 +103,15 @@ class VoicevoxGUI(tk.Tk):
         self.status_label = tk.Label(self, textvariable=self.status_var)
         self.status_label.pack(fill="x", padx=10, pady=(5, 0))
 
-        self.run_button = tk.Button(self, text="音声生成を実行", command=self.run_pipeline)
-        self.run_button.pack(pady=10)
+        self.settings_var = tk.StringVar()
+        self._update_settings_label()
+        tk.Label(self, textvariable=self.settings_var, fg="#555555").pack(anchor="w", padx=10)
+
+        btn_frame = tk.Frame(self)
+        btn_frame.pack(fill="x", padx=10, pady=5)
+        tk.Button(btn_frame, text="設定", command=self.open_settings).pack(side="left")
+        self.run_button = tk.Button(btn_frame, text="音声生成を実行", command=self.run_pipeline)
+        self.run_button.pack(side="right")
 
     def run_pipeline(self) -> None:
         text = self.text_widget.get("1.0", tk.END).strip()
@@ -102,6 +163,10 @@ class VoicevoxGUI(tk.Tk):
                 str(assignments_path),
                 "--synthesis-outdir",
                 str(output_dir),
+                "--llm-provider",
+                self.llm_provider,
+                "--model",
+                self.llm_model,
             ]
             self._update_status("auto_assign_voicevox.py を実行しています...")
             subprocess.run(cmd, check=True, cwd=REPO_ROOT)
@@ -145,6 +210,90 @@ class VoicevoxGUI(tk.Tk):
             subprocess.Popen(["xdg-open", str(path)])
         elif os.name == "nt":
             subprocess.Popen(["explorer", str(path)])
+
+    def _update_settings_label(self) -> None:
+        self.settings_var.set(f"利用中の LLM: {self.llm_provider} / {self.llm_model}")
+
+    def open_settings(self) -> None:
+        SettingsWindow(self)
+
+    def apply_settings(self, provider: str, model: str) -> None:
+        self.llm_provider = provider
+        self.llm_model = model
+        self._update_settings_label()
+        save_settings(provider, model)
+
+
+class SettingsWindow(tk.Toplevel):
+    def __init__(self, parent: VoicevoxGUI) -> None:
+        super().__init__(parent)
+        self.title("設定")
+        self.resizable(False, False)
+        self.parent = parent
+
+        self.provider_var = tk.StringVar(value=parent.llm_provider)
+        self.model_var = tk.StringVar(value=parent.llm_model)
+
+        tk.Label(self, text="AIプロバイダ").grid(row=0, column=0, padx=10, pady=(10, 4), sticky="w")
+        provider_menu = tk.OptionMenu(self, self.provider_var, *PROVIDER_CHOICES, command=self._on_provider_change)
+        provider_menu.grid(row=0, column=1, padx=10, pady=(10, 4), sticky="ew")
+
+        tk.Label(self, text="モデル一覧").grid(row=1, column=0, padx=10, pady=(4, 0), sticky="w")
+        self.model_listbox = tk.Listbox(self, height=6, exportselection=False)
+        self.model_listbox.grid(row=2, column=0, columnspan=2, padx=10, pady=(0, 4), sticky="nsew")
+        self.model_listbox.bind("<<ListboxSelect>>", self._on_model_select)
+
+        tk.Label(self, text="モデル（カスタム入力可）").grid(row=3, column=0, padx=10, pady=(4, 0), sticky="w")
+        tk.Entry(self, textvariable=self.model_var, width=35).grid(row=4, column=0, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
+
+        btn_frame = tk.Frame(self)
+        btn_frame.grid(row=5, column=0, columnspan=2, pady=10)
+        tk.Button(btn_frame, text="完了", command=self._apply).pack(side="left", padx=5)
+        tk.Button(btn_frame, text="キャンセル", command=self.destroy).pack(side="left", padx=5)
+
+        self.grid_columnconfigure(1, weight=1)
+        self._populate_models(self.provider_var.get())
+        self._select_current_model()
+
+    def _populate_models(self, provider: str) -> None:
+        self.model_listbox.delete(0, tk.END)
+        for model in MODEL_CHOICES.get(provider, []):
+            self.model_listbox.insert(tk.END, model)
+
+    def _select_current_model(self) -> None:
+        current = self.model_var.get()
+        items = self.model_listbox.get(0, tk.END)
+        if current in items:
+            idx = items.index(current)
+            self.model_listbox.selection_set(idx)
+            self.model_listbox.see(idx)
+
+    def _on_provider_change(self, *_args) -> None:
+        provider = self.provider_var.get()
+        self._populate_models(provider)
+        # Reset selection if current model not in list
+        if self.model_var.get() not in MODEL_CHOICES.get(provider, []):
+            default_list = MODEL_CHOICES.get(provider)
+            if default_list:
+                self.model_var.set(default_list[0])
+                self._select_current_model()
+
+    def _on_model_select(self, _event) -> None:
+        selection = self.model_listbox.curselection()
+        if selection:
+            self.model_var.set(self.model_listbox.get(selection[0]))
+
+    def _apply(self) -> None:
+        provider = self.provider_var.get()
+        model = self.model_var.get().strip()
+        if not provider:
+            messagebox.showwarning("入力エラー", "プロバイダを選択してください。", parent=self)
+            return
+        if not model:
+            messagebox.showwarning("入力エラー", "モデルを入力してください。", parent=self)
+            return
+        self.parent.apply_settings(provider, model)
+        self.destroy()
 
 
 def main() -> None:
