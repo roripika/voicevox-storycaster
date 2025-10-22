@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Small helper to start the VOICEVOX Engine installed by scripts/install_voicevox_engine.sh
+# Usage: bin/voicevox-engine-start [--host 127.0.0.1] [--port 50021] [--extra "...args..."]
+
+HOST="127.0.0.1"
+PORT="50021"
+EXTRA_ARGS=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --host) HOST="$2"; shift 2;;
+    --port) PORT="$2"; shift 2;;
+    --extra) EXTRA_ARGS="$2"; shift 2;;
+    -h|--help)
+      echo "Usage: bin/voicevox-engine-start [--host 127.0.0.1] [--port 50021] [--extra \"...\"]"; exit 0;;
+    *) echo "Unknown option: $1" >&2; exit 1;;
+  esac
+done
+
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd -P)
+ENGINE_DIR="$ROOT_DIR/voicevox_engine"
+
+if [[ ! -d "$ENGINE_DIR" ]]; then
+  echo "VOICEVOX Engine not found at $ENGINE_DIR" >&2
+  echo "Run: bash scripts/install_voicevox_engine.sh" >&2
+  exit 1
+fi
+
+cd "$ENGINE_DIR"
+
+if [[ -x ./run ]]; then
+  exec ./run --host "$HOST" --port "$PORT" ${EXTRA_ARGS}
+elif [[ -x ./run.sh ]]; then
+  exec ./run.sh --host "$HOST" --port "$PORT" ${EXTRA_ARGS}
+elif [[ -f ./run.py ]]; then
+  if command -v python3 >/dev/null 2>&1; then
+    exec python3 ./run.py --host "$HOST" --port "$PORT" ${EXTRA_ARGS}
+  else
+    echo "No suitable run entrypoint found (run/run.sh/run.py)." >&2
+    exit 1
+  fi
+else
+  echo "No suitable run entrypoint found (run/run.sh/run.py)." >&2
+  exit 1
+fi
+

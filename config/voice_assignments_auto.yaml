@@ -1,0 +1,35 @@
+meta:
+  description: 自動生成された VOICEVOX 担当設定
+  notes: auto_assign_voicevox.py により生成。必要に応じて調整してください。
+defaults:
+  speedScale: 1.0
+  pitchScale: 0.0
+  intonationScale: 1.0
+  volumeScale: 1.0
+  prePhonemeLength: 0.1
+  postPhonemeLength: 0.1
+characters:
+- name: 俺
+  style_id: 11
+  voicevox_speaker: 玄野武宏
+  notes:
+    style_name: ノーマル
+    mapping_rationale: 現実逃避的で不安を抱える性格に合ったサッパリした声が適しているため。
+  profile:
+    role: 主人公
+    gender: 男性
+    age_hint: 成人
+    personality: 現実逃避的で不安を抱える
+    voice_hint: 落ち着いた口調だが時折焦りが見える
+- name: 姉
+  style_id: 8
+  voicevox_speaker: 春日部つむぎ
+  notes:
+    style_name: ノーマル
+    mapping_rationale: 横暴で強引な性格に合う元気な声が威圧感を与えるため。
+  profile:
+    role: 家族
+    gender: 女性
+    age_hint: 成人
+    personality: 横暴で強引
+    voice_hint: 高めで威圧感のある声

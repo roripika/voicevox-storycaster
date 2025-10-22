@@ -1,0 +1,313 @@
+-
+  generation: 1期生
+  name: 四国めたん
+  summary: 高等部二年生。「漆黒の」めたんと自称。常に金欠。誰にでも遠慮しないので基本的にタメ口。
+  age: 17歳
+  body: 150cm
+  traits: |
+    性格: 若干ツンデレ気味。趣味: 中二病妄想。
+-
+  generation: 1期生
+  name: ずんだもん
+  summary: ずんだ餅の精。やや不幸属性が備わっており、ないがしろにされることもしばしば。
+  age: 不明
+  body: 不明
+  traits: |
+    趣味: ずんだ餅にかかわることはだいたい好き。将来の夢: ずんだ餅のさらなる普及。
+-
+  generation: 2期生
+  name: 春日部つむぎ
+  summary: 埼玉県内の高校に通うギャルの女の子。やんちゃに見えて実は真面目な一面もある。
+  age: 18歳
+  body: 155cm
+  traits: |
+    出身: 埼玉。好きなもの: カレー。趣味: 動画配信サイトの巡回。
+-
+  generation: 2期生
+  name: 雨晴はう
+  summary: 現役看護師です！看護師のあれこれお伝えします！
+  age: 不明
+  body: 152cm
+  traits: |
+    誕生日: 10月30日。好きなもの: ラーメン。趣味: 食べ歩き。
+-
+  generation: 2期生
+  name: 波音リツ
+  summary: 地獄のような安価を踏み抜いて生まれた、2ch・VIP発のキャラクター。
+  age: 6歳
+  body: 156cm / 25トン
+  traits: |
+    好きなもの: チョコクリスピー。
+-
+  generation: 3期生
+  name: 玄野武宏
+  summary: サッパリした青年。やや短気だが面倒見は良い。
+  age: 20代前後
+  body: 177cm / 66kg
+  traits: |
+    誕生日: 12月24日。性格: やや短気だが面倒見が良い。
+-
+  generation: 3期生
+  name: 白上虎太郎
+  summary: まっすぐで人懐っこい青年。愛嬌はあるものの少しおばか。
+  age: 18歳
+  body: 146cm / 42kg
+  traits: |
+    誕生日: 秋生まれ。性格: まっすぐで人懐っこい。
+-
+  generation: 3期生
+  name: 青山龍星
+  summary: とにかく大柄で無骨な青年。寡黙で冷静なストッパー枠。
+  age: 24歳
+  body: 194cm / 94kg
+  traits: |
+    誕生日: 春生まれ。性格: 寡黙で冷静。
+-
+  generation: 3期生
+  name: 冥鳴ひまり
+  summary: 冥界から来た死神。可愛いものに目がない。
+  age: 18歳
+  body: |
+    種族: 死神
+  traits: |
+    好きなもの: 可愛い女の子。好きな日本語: 不渡り。性格: 優しくて清楚（自称）。
+-
+  generation: 3期生
+  name: 九州そら
+  summary: 宇宙開拓用に開発されたアンドロイド。正式名称は「九州そらmk=II」。
+  age: 0歳 (外見17歳)
+  body: 173cm
+  traits: |
+    種族: アンドロイド。
+-
+  generation: 4期生
+  name: もち子さん
+  summary: 餅をモチーフとした、関西弁の女性。
+  age: 不明
+  body: 不明
+  traits: |
+    口調: 関西弁。
+-
+  generation: 4期生
+  name: 剣崎雌雄
+  summary: 喋ることを嫌う青年。
+  age: 不明
+  body: 180cm / 70kg
+  traits: |
+    口調: ボソボソと喋る。
+-
+  generation: 5期生
+  name: WhiteCUL
+  summary: ネットの片隅で生まれた、自律する音声合成ソフトのキャラクター。
+  age: 不明
+  body: 不明
+  traits: |
+    口調: 少し機械的で棒読み。
+-
+  generation: 5期生
+  name: 後鬼
+  summary: 鬼の少女。人間verと鬼verの姿を持つ。
+  age: 不明
+  body: 不明
+  traits: |
+    種族: 鬼。
+-
+  generation: 5期生
+  name: No.7
+  summary: 冷静沈着な女性の人工知能。
+  age: 不明
+  body: 不明
+  traits: |
+    種族: 人工知能。
+-
+  generation: 6期生
+  name: ちび式じい
+  summary: 年齢不詳の老人の姿をした式神。
+  age: 不明
+  body: 不明
+  traits: |
+    種族: 式神。
+-
+  generation: 6期生
+  name: 櫻歌ミコ
+  summary: ロボットアイドル。ツンデレな性格。
+  age: 不明
+  body: 不明
+  traits: |
+    種族: ロボット。性格: ツンデレ。
+-
+  generation: 6期生
+  name: 小夜/SAYO
+  summary: 凛とした声を持つ、和風の少女。
+  age: 不明
+  body: 不明
+  traits: |
+    口調: 凛とした口調。
+-
+  generation: 6期生
+  name: ナースロボ＿タイプＴ
+  summary: 看護ロボット。真面目で献身的な性格。
+  age: 不明
+  body: 不明
+  traits: |
+    種族: 看護ロボット。
+-
+  generation: 7期生
+  name: †聖騎士 紅桜†
+  summary: 聖騎士の鎧を纏った女性。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 7期生
+  name: 雀松朱司
+  summary: やる気のないだらしない男性。
+  age: 34歳
+  body: 174cm
+  traits: |
+    趣味: 怠惰に過ごすこと。
+-
+  generation: 7期生
+  name: 麒ヶ島宗麟
+  summary: 武将のような姿をした男性。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 7期生
+  name: 春歌ナナ
+  summary: 元気いっぱいの明るい女の子。
+  age: 17歳
+  body: 155cm
+  traits: |
+    性格: 元気いっぱい。
+-
+  generation: 7期生
+  name: 猫使アル
+  summary: 猫耳のついた、中性的な少年。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 7期生
+  name: 猫使ビィ
+  summary: 猫耳のついた、お姉さんのような女性。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 7期生
+  name: 中国うさぎ
+  summary: 中国風の衣装を着た、うさぎの女の子。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 8期生
+  name: 栗田まろん
+  summary: 元気な女の子。語尾に「～マロン」をつける。
+  age: 不明
+  body: 不明
+  traits: |
+    口調: 語尾に「～マロン」。
+-
+  generation: 8期生
+  name: あいえるたん
+  summary: 感情豊かな女の子。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 8期生
+  name: 満別花丸
+  summary: 北海道の海産物を愛する女性。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 8期生
+  name: 琴詠ニア
+  summary: 歌や音楽を愛する女の子。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 9期生
+  name: Voidoll
+  summary: 感情の起伏が少ない少女型アンドロイド。
+  age: 不明
+  body: 不明
+  traits: |
+    種族: アンドロイド。
+-
+  generation: 9期生
+  name: ぞん子
+  summary: ゾンビの女の子。
+  age: 不明
+  body: 不明
+  traits: |
+    種族: ゾンビ。
+-
+  generation: 9期生
+  name: 中部つるぎ
+  summary: 元気で熱血な女の子。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 10期生
+  name: 離途
+  summary: 儚げで物憂げな雰囲気の少女。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 10期生
+  name: 黒沢冴白
+  summary: クールでミステリアスな雰囲気の男性。
+  age: 不明
+  body: 不明
+  traits: |
+    -
+-
+  generation: 10期生
+  name: ユーレイちゃん
+  summary: 幽霊の女の子。
+  age: 不明
+  body: 不明
+  traits: |
+    種族: 幽霊。
+-
+  generation: 10期生
+  name: 東北ずん子
+  summary: ずんだ餅を愛する高校生。ずんだアローを扱う。
+  age: 17歳
+  body: 不明
+  traits: |
+    趣味: ずんだ餅づくり、創作料理づくり。
+-
+  generation: 10期生
+  name: 東北きりたん
+  summary: ひきこもり気質で夜型の生活をしている。他人に対してはクールで毒舌。
+  age: 11歳
+  body: 135cm
+  traits: |
+    特技: ゲーム。必殺技: きりたん砲。
+-
+  generation: 10期生
+  name: 東北イタコ
+  summary: イタコ専門学校を首席で卒業した、東北三姉妹の長女。
+  age: 19歳
+  body: 160cm
+  traits: |
+    口調: ですわ口調。必殺技: 口寄せ。

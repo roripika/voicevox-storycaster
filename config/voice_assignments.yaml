@@ -1,0 +1,72 @@
+# VOICEVOX 担当一覧（キャラクター名 → VOICEVOX スタイルID）
+# - style_id はエンジン API の /speakers で得られる各 style の id を指定します
+# - 参考: scripts/export_voicevox_speakers.sh で一覧（md/csv/json）を生成できます
+# - synthesis 時はクエリ param の speaker に style_id を渡します（例: speaker=1）
+
+meta:
+  description: 小説の登場人物ごとの読み上げ担当設定
+  notes: 必要に応じて speed/pitch/intonation/volume の補正やプロフィール情報を追加してください
+
+defaults:
+  # クエリ生成（audio_query）のスケール補正デフォルト
+  speedScale: 1.0
+  pitchScale: 0.0
+  intonationScale: 1.0
+  volumeScale: 1.0
+  prePhonemeLength: 0.1
+  postPhonemeLength: 0.1
+
+characters:
+  - name: "ナレーション"
+    style_id: 3
+    overrides:
+      speedScale: 0.95
+    profile:
+      role: 物語の地の文担当
+
+  - name: "猫使アル"
+    style_id: 55  # タイプ:Red 猫使アル ノーマル
+    overrides:
+      pitchScale: -0.1  # 少年っぽい低めの声を意識してピッチをわずかに下げる
+    profile:
+      type: "タイプ:Red"
+      description: "謎の研究所で作られた猫使シリーズのタイプRed。少年のような中辛な低めの声。"
+      appearance_age: "10代前半"
+      height: "140cm"
+      gender: "自由"
+      personality: "マイペースで気まぐれ。夜になると走り回る元気な猫。同期型の猫使ビィと一緒にいるのが落ち着く。"
+      likes: ["はまち", "噛むこと"]
+      dislikes: ["ねずみ"]
+      first_person: ["アル", "おれ", "ボク"]
+      second_person: ["〜さん", "〜先輩"]
+      calls:
+        猫使ビィ: "ビィ"
+
+  - name: "猫使ビィ"
+    style_id: 58  # タイプ:Blue 猫使ビィ ノーマル
+    overrides:
+      pitchScale: 0.15  # 甘口で高めの声を軽く強調
+    profile:
+      type: "タイプ:Blue"
+      description: "謎の研究所で作られた猫使シリーズのタイプBlue。少女っぽい甘口で高めの声。"
+      appearance_age: "10代前半"
+      height: "140cm"
+      gender: "自由"
+      personality: "シャイでおくびょう。慣れたらデレデレ。警戒心が強い猫。"
+      likes: ["サーモン", "おひるね"]
+      dislikes: ["おばけ"]
+      first_person: ["ビィ", "私", "ボク"]
+      second_person: ["〜さん", "〜先輩"]
+      calls:
+        猫使アル: "アル"
+
+  - name: "ぞん子"
+    style_id: 90  # ぞん子 ノーマル
+    overrides:
+      speedScale: 1.02  # 元気さを少し強調
+    profile:
+      description: "ZONeエナジー公式アンバサダーとしてZONeを広める活動をしている。"
+      birthday: "05.12"
+      likes: ["ゲーム", "音楽", "インターネット", "最新コンテンツ", "ハイクオリティな体験"]
+      weaknesses: ["早寝早起き", "低気圧"]
+      hobbies: ["クリエイターのSNSをチェックすること"]

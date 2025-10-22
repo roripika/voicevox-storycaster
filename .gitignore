@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+
+# VOICEVOX engine binaries
+.voicevox/
+voicevox_engine/
+
+# Generated outputs
+output/
+output_auto/
+output_gui/
+
+# Audio artifacts
+*.wav
+*.mp3
+*.flac
+
+# Example novels / large texts
+*.txt
+!requirements.txt
+
+# CSV data exports
+*.csv
+
+# Speaker details (large base64 portraits)
+data/speaker_info/
+
+# macOS artifacts
+.DS_Store
+
+# Command outputs or logs
+*.log

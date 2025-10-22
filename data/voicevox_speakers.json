@@ -1,0 +1,680 @@
+[
+  {
+    "style_id": 2,
+    "style_name": "ノーマル",
+    "speaker_name": "四国めたん",
+    "speaker_uuid": "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff"
+  },
+  {
+    "style_id": 0,
+    "style_name": "あまあま",
+    "speaker_name": "四国めたん",
+    "speaker_uuid": "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff"
+  },
+  {
+    "style_id": 6,
+    "style_name": "ツンツン",
+    "speaker_name": "四国めたん",
+    "speaker_uuid": "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff"
+  },
+  {
+    "style_id": 4,
+    "style_name": "セクシー",
+    "speaker_name": "四国めたん",
+    "speaker_uuid": "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff"
+  },
+  {
+    "style_id": 36,
+    "style_name": "ささやき",
+    "speaker_name": "四国めたん",
+    "speaker_uuid": "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff"
+  },
+  {
+    "style_id": 37,
+    "style_name": "ヒソヒソ",
+    "speaker_name": "四国めたん",
+    "speaker_uuid": "7ffcb7ce-00ec-4bdc-82cd-45a8889e43ff"
+  },
+  {
+    "style_id": 3,
+    "style_name": "ノーマル",
+    "speaker_name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9"
+  },
+  {
+    "style_id": 1,
+    "style_name": "あまあま",
+    "speaker_name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9"
+  },
+  {
+    "style_id": 7,
+    "style_name": "ツンツン",
+    "speaker_name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9"
+  },
+  {
+    "style_id": 5,
+    "style_name": "セクシー",
+    "speaker_name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9"
+  },
+  {
+    "style_id": 22,
+    "style_name": "ささやき",
+    "speaker_name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9"
+  },
+  {
+    "style_id": 38,
+    "style_name": "ヒソヒソ",
+    "speaker_name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9"
+  },
+  {
+    "style_id": 75,
+    "style_name": "ヘロヘロ",
+    "speaker_name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9"
+  },
+  {
+    "style_id": 76,
+    "style_name": "なみだめ",
+    "speaker_name": "ずんだもん",
+    "speaker_uuid": "388f246b-8c41-4ac1-8e2d-5d79f3ff56d9"
+  },
+  {
+    "style_id": 8,
+    "style_name": "ノーマル",
+    "speaker_name": "春日部つむぎ",
+    "speaker_uuid": "35b2c544-660e-401e-b503-0e14c635303a"
+  },
+  {
+    "style_id": 10,
+    "style_name": "ノーマル",
+    "speaker_name": "雨晴はう",
+    "speaker_uuid": "3474ee95-c274-47f9-aa1a-8322163d96f1"
+  },
+  {
+    "style_id": 9,
+    "style_name": "ノーマル",
+    "speaker_name": "波音リツ",
+    "speaker_uuid": "b1a81618-b27b-40d2-b0ea-27a9ad408c4b"
+  },
+  {
+    "style_id": 65,
+    "style_name": "クイーン",
+    "speaker_name": "波音リツ",
+    "speaker_uuid": "b1a81618-b27b-40d2-b0ea-27a9ad408c4b"
+  },
+  {
+    "style_id": 11,
+    "style_name": "ノーマル",
+    "speaker_name": "玄野武宏",
+    "speaker_uuid": "c30dc15a-0992-4f8d-8bb8-ad3b314e6a6f"
+  },
+  {
+    "style_id": 39,
+    "style_name": "喜び",
+    "speaker_name": "玄野武宏",
+    "speaker_uuid": "c30dc15a-0992-4f8d-8bb8-ad3b314e6a6f"
+  },
+  {
+    "style_id": 40,
+    "style_name": "ツンギレ",
+    "speaker_name": "玄野武宏",
+    "speaker_uuid": "c30dc15a-0992-4f8d-8bb8-ad3b314e6a6f"
+  },
+  {
+    "style_id": 41,
+    "style_name": "悲しみ",
+    "speaker_name": "玄野武宏",
+    "speaker_uuid": "c30dc15a-0992-4f8d-8bb8-ad3b314e6a6f"
+  },
+  {
+    "style_id": 12,
+    "style_name": "ふつう",
+    "speaker_name": "白上虎太郎",
+    "speaker_uuid": "e5020595-5c5d-4e87-b849-270a518d0dcf"
+  },
+  {
+    "style_id": 32,
+    "style_name": "わーい",
+    "speaker_name": "白上虎太郎",
+    "speaker_uuid": "e5020595-5c5d-4e87-b849-270a518d0dcf"
+  },
+  {
+    "style_id": 33,
+    "style_name": "びくびく",
+    "speaker_name": "白上虎太郎",
+    "speaker_uuid": "e5020595-5c5d-4e87-b849-270a518d0dcf"
+  },
+  {
+    "style_id": 34,
+    "style_name": "おこ",
+    "speaker_name": "白上虎太郎",
+    "speaker_uuid": "e5020595-5c5d-4e87-b849-270a518d0dcf"
+  },
+  {
+    "style_id": 35,
+    "style_name": "びえーん",
+    "speaker_name": "白上虎太郎",
+    "speaker_uuid": "e5020595-5c5d-4e87-b849-270a518d0dcf"
+  },
+  {
+    "style_id": 13,
+    "style_name": "ノーマル",
+    "speaker_name": "青山龍星",
+    "speaker_uuid": "4f51116a-d9ee-4516-925d-21f183e2afad"
+  },
+  {
+    "style_id": 81,
+    "style_name": "熱血",
+    "speaker_name": "青山龍星",
+    "speaker_uuid": "4f51116a-d9ee-4516-925d-21f183e2afad"
+  },
+  {
+    "style_id": 82,
+    "style_name": "不機嫌",
+    "speaker_name": "青山龍星",
+    "speaker_uuid": "4f51116a-d9ee-4516-925d-21f183e2afad"
+  },
+  {
+    "style_id": 83,
+    "style_name": "喜び",
+    "speaker_name": "青山龍星",
+    "speaker_uuid": "4f51116a-d9ee-4516-925d-21f183e2afad"
+  },
+  {
+    "style_id": 84,
+    "style_name": "しっとり",
+    "speaker_name": "青山龍星",
+    "speaker_uuid": "4f51116a-d9ee-4516-925d-21f183e2afad"
+  },
+  {
+    "style_id": 85,
+    "style_name": "かなしみ",
+    "speaker_name": "青山龍星",
+    "speaker_uuid": "4f51116a-d9ee-4516-925d-21f183e2afad"
+  },
+  {
+    "style_id": 86,
+    "style_name": "囁き",
+    "speaker_name": "青山龍星",
+    "speaker_uuid": "4f51116a-d9ee-4516-925d-21f183e2afad"
+  },
+  {
+    "style_id": 14,
+    "style_name": "ノーマル",
+    "speaker_name": "冥鳴ひまり",
+    "speaker_uuid": "8eaad775-3119-417e-8cf4-2a10bfd592c8"
+  },
+  {
+    "style_id": 16,
+    "style_name": "ノーマル",
+    "speaker_name": "九州そら",
+    "speaker_uuid": "481fb609-6446-4870-9f46-90c4dd623403"
+  },
+  {
+    "style_id": 15,
+    "style_name": "あまあま",
+    "speaker_name": "九州そら",
+    "speaker_uuid": "481fb609-6446-4870-9f46-90c4dd623403"
+  },
+  {
+    "style_id": 18,
+    "style_name": "ツンツン",
+    "speaker_name": "九州そら",
+    "speaker_uuid": "481fb609-6446-4870-9f46-90c4dd623403"
+  },
+  {
+    "style_id": 17,
+    "style_name": "セクシー",
+    "speaker_name": "九州そら",
+    "speaker_uuid": "481fb609-6446-4870-9f46-90c4dd623403"
+  },
+  {
+    "style_id": 19,
+    "style_name": "ささやき",
+    "speaker_name": "九州そら",
+    "speaker_uuid": "481fb609-6446-4870-9f46-90c4dd623403"
+  },
+  {
+    "style_id": 20,
+    "style_name": "ノーマル",
+    "speaker_name": "もち子さん",
+    "speaker_uuid": "9f3ee141-26ad-437e-97bd-d22298d02ad2"
+  },
+  {
+    "style_id": 66,
+    "style_name": "セクシー／あん子",
+    "speaker_name": "もち子さん",
+    "speaker_uuid": "9f3ee141-26ad-437e-97bd-d22298d02ad2"
+  },
+  {
+    "style_id": 77,
+    "style_name": "泣き",
+    "speaker_name": "もち子さん",
+    "speaker_uuid": "9f3ee141-26ad-437e-97bd-d22298d02ad2"
+  },
+  {
+    "style_id": 78,
+    "style_name": "怒り",
+    "speaker_name": "もち子さん",
+    "speaker_uuid": "9f3ee141-26ad-437e-97bd-d22298d02ad2"
+  },
+  {
+    "style_id": 79,
+    "style_name": "喜び",
+    "speaker_name": "もち子さん",
+    "speaker_uuid": "9f3ee141-26ad-437e-97bd-d22298d02ad2"
+  },
+  {
+    "style_id": 80,
+    "style_name": "のんびり",
+    "speaker_name": "もち子さん",
+    "speaker_uuid": "9f3ee141-26ad-437e-97bd-d22298d02ad2"
+  },
+  {
+    "style_id": 21,
+    "style_name": "ノーマル",
+    "speaker_name": "剣崎雌雄",
+    "speaker_uuid": "1a17ca16-7ee5-4ea5-b191-2f02ace24d21"
+  },
+  {
+    "style_id": 23,
+    "style_name": "ノーマル",
+    "speaker_name": "WhiteCUL",
+    "speaker_uuid": "67d5d8da-acd7-4207-bb10-b5542d3a663b"
+  },
+  {
+    "style_id": 24,
+    "style_name": "たのしい",
+    "speaker_name": "WhiteCUL",
+    "speaker_uuid": "67d5d8da-acd7-4207-bb10-b5542d3a663b"
+  },
+  {
+    "style_id": 25,
+    "style_name": "かなしい",
+    "speaker_name": "WhiteCUL",
+    "speaker_uuid": "67d5d8da-acd7-4207-bb10-b5542d3a663b"
+  },
+  {
+    "style_id": 26,
+    "style_name": "びえーん",
+    "speaker_name": "WhiteCUL",
+    "speaker_uuid": "67d5d8da-acd7-4207-bb10-b5542d3a663b"
+  },
+  {
+    "style_id": 27,
+    "style_name": "人間ver.",
+    "speaker_name": "後鬼",
+    "speaker_uuid": "0f56c2f2-644c-49c9-8989-94e11f7129d0"
+  },
+  {
+    "style_id": 28,
+    "style_name": "ぬいぐるみver.",
+    "speaker_name": "後鬼",
+    "speaker_uuid": "0f56c2f2-644c-49c9-8989-94e11f7129d0"
+  },
+  {
+    "style_id": 87,
+    "style_name": "人間（怒り）ver.",
+    "speaker_name": "後鬼",
+    "speaker_uuid": "0f56c2f2-644c-49c9-8989-94e11f7129d0"
+  },
+  {
+    "style_id": 88,
+    "style_name": "鬼ver.",
+    "speaker_name": "後鬼",
+    "speaker_uuid": "0f56c2f2-644c-49c9-8989-94e11f7129d0"
+  },
+  {
+    "style_id": 29,
+    "style_name": "ノーマル",
+    "speaker_name": "No.7",
+    "speaker_uuid": "044830d2-f23b-44d6-ac0d-b5d733caa900"
+  },
+  {
+    "style_id": 30,
+    "style_name": "アナウンス",
+    "speaker_name": "No.7",
+    "speaker_uuid": "044830d2-f23b-44d6-ac0d-b5d733caa900"
+  },
+  {
+    "style_id": 31,
+    "style_name": "読み聞かせ",
+    "speaker_name": "No.7",
+    "speaker_uuid": "044830d2-f23b-44d6-ac0d-b5d733caa900"
+  },
+  {
+    "style_id": 42,
+    "style_name": "ノーマル",
+    "speaker_name": "ちび式じい",
+    "speaker_uuid": "468b8e94-9da4-4f7a-8715-a22a48844f9e"
+  },
+  {
+    "style_id": 43,
+    "style_name": "ノーマル",
+    "speaker_name": "櫻歌ミコ",
+    "speaker_uuid": "0693554c-338e-4790-8982-b9c6d476dc69"
+  },
+  {
+    "style_id": 44,
+    "style_name": "第二形態",
+    "speaker_name": "櫻歌ミコ",
+    "speaker_uuid": "0693554c-338e-4790-8982-b9c6d476dc69"
+  },
+  {
+    "style_id": 45,
+    "style_name": "ロリ",
+    "speaker_name": "櫻歌ミコ",
+    "speaker_uuid": "0693554c-338e-4790-8982-b9c6d476dc69"
+  },
+  {
+    "style_id": 46,
+    "style_name": "ノーマル",
+    "speaker_name": "小夜/SAYO",
+    "speaker_uuid": "a8cc6d22-aad0-4ab8-bf1e-2f843924164a"
+  },
+  {
+    "style_id": 47,
+    "style_name": "ノーマル",
+    "speaker_name": "ナースロボ＿タイプＴ",
+    "speaker_uuid": "882a636f-3bac-431a-966d-c5e6bba9f949"
+  },
+  {
+    "style_id": 48,
+    "style_name": "楽々",
+    "speaker_name": "ナースロボ＿タイプＴ",
+    "speaker_uuid": "882a636f-3bac-431a-966d-c5e6bba9f949"
+  },
+  {
+    "style_id": 49,
+    "style_name": "恐怖",
+    "speaker_name": "ナースロボ＿タイプＴ",
+    "speaker_uuid": "882a636f-3bac-431a-966d-c5e6bba9f949"
+  },
+  {
+    "style_id": 50,
+    "style_name": "内緒話",
+    "speaker_name": "ナースロボ＿タイプＴ",
+    "speaker_uuid": "882a636f-3bac-431a-966d-c5e6bba9f949"
+  },
+  {
+    "style_id": 51,
+    "style_name": "ノーマル",
+    "speaker_name": "†聖騎士 紅桜†",
+    "speaker_uuid": "471e39d2-fb11-4c8c-8d89-4b322d2498e0"
+  },
+  {
+    "style_id": 52,
+    "style_name": "ノーマル",
+    "speaker_name": "雀松朱司",
+    "speaker_uuid": "0acebdee-a4a5-4e12-a695-e19609728e30"
+  },
+  {
+    "style_id": 53,
+    "style_name": "ノーマル",
+    "speaker_name": "麒ヶ島宗麟",
+    "speaker_uuid": "7d1e7ba7-f957-40e5-a3fc-da49f769ab65"
+  },
+  {
+    "style_id": 54,
+    "style_name": "ノーマル",
+    "speaker_name": "春歌ナナ",
+    "speaker_uuid": "ba5d2428-f7e0-4c20-ac41-9dd56e9178b4"
+  },
+  {
+    "style_id": 55,
+    "style_name": "ノーマル",
+    "speaker_name": "猫使アル",
+    "speaker_uuid": "00a5c10c-d3bd-459f-83fd-43180b521a44"
+  },
+  {
+    "style_id": 56,
+    "style_name": "おちつき",
+    "speaker_name": "猫使アル",
+    "speaker_uuid": "00a5c10c-d3bd-459f-83fd-43180b521a44"
+  },
+  {
+    "style_id": 57,
+    "style_name": "うきうき",
+    "speaker_name": "猫使アル",
+    "speaker_uuid": "00a5c10c-d3bd-459f-83fd-43180b521a44"
+  },
+  {
+    "style_id": 110,
+    "style_name": "つよつよ",
+    "speaker_name": "猫使アル",
+    "speaker_uuid": "00a5c10c-d3bd-459f-83fd-43180b521a44"
+  },
+  {
+    "style_id": 111,
+    "style_name": "へろへろ",
+    "speaker_name": "猫使アル",
+    "speaker_uuid": "00a5c10c-d3bd-459f-83fd-43180b521a44"
+  },
+  {
+    "style_id": 58,
+    "style_name": "ノーマル",
+    "speaker_name": "猫使ビィ",
+    "speaker_uuid": "c20a2254-0349-4470-9fc8-e5c0f8cf3404"
+  },
+  {
+    "style_id": 59,
+    "style_name": "おちつき",
+    "speaker_name": "猫使ビィ",
+    "speaker_uuid": "c20a2254-0349-4470-9fc8-e5c0f8cf3404"
+  },
+  {
+    "style_id": 60,
+    "style_name": "人見知り",
+    "speaker_name": "猫使ビィ",
+    "speaker_uuid": "c20a2254-0349-4470-9fc8-e5c0f8cf3404"
+  },
+  {
+    "style_id": 112,
+    "style_name": "つよつよ",
+    "speaker_name": "猫使ビィ",
+    "speaker_uuid": "c20a2254-0349-4470-9fc8-e5c0f8cf3404"
+  },
+  {
+    "style_id": 61,
+    "style_name": "ノーマル",
+    "speaker_name": "中国うさぎ",
+    "speaker_uuid": "1f18ffc3-47ea-4ce0-9829-0576d03a7ec8"
+  },
+  {
+    "style_id": 62,
+    "style_name": "おどろき",
+    "speaker_name": "中国うさぎ",
+    "speaker_uuid": "1f18ffc3-47ea-4ce0-9829-0576d03a7ec8"
+  },
+  {
+    "style_id": 63,
+    "style_name": "こわがり",
+    "speaker_name": "中国うさぎ",
+    "speaker_uuid": "1f18ffc3-47ea-4ce0-9829-0576d03a7ec8"
+  },
+  {
+    "style_id": 64,
+    "style_name": "へろへろ",
+    "speaker_name": "中国うさぎ",
+    "speaker_uuid": "1f18ffc3-47ea-4ce0-9829-0576d03a7ec8"
+  },
+  {
+    "style_id": 67,
+    "style_name": "ノーマル",
+    "speaker_name": "栗田まろん",
+    "speaker_uuid": "04dbd989-32d0-40b4-9e71-17c920f2a8a9"
+  },
+  {
+    "style_id": 68,
+    "style_name": "ノーマル",
+    "speaker_name": "あいえるたん",
+    "speaker_uuid": "dda44ade-5f9c-4a3a-9d2c-2a976c7476d9"
+  },
+  {
+    "style_id": 69,
+    "style_name": "ノーマル",
+    "speaker_name": "満別花丸",
+    "speaker_uuid": "287aa49f-e56b-4530-a469-855776c84a8d"
+  },
+  {
+    "style_id": 70,
+    "style_name": "元気",
+    "speaker_name": "満別花丸",
+    "speaker_uuid": "287aa49f-e56b-4530-a469-855776c84a8d"
+  },
+  {
+    "style_id": 71,
+    "style_name": "ささやき",
+    "speaker_name": "満別花丸",
+    "speaker_uuid": "287aa49f-e56b-4530-a469-855776c84a8d"
+  },
+  {
+    "style_id": 72,
+    "style_name": "ぶりっ子",
+    "speaker_name": "満別花丸",
+    "speaker_uuid": "287aa49f-e56b-4530-a469-855776c84a8d"
+  },
+  {
+    "style_id": 73,
+    "style_name": "ボーイ",
+    "speaker_name": "満別花丸",
+    "speaker_uuid": "287aa49f-e56b-4530-a469-855776c84a8d"
+  },
+  {
+    "style_id": 74,
+    "style_name": "ノーマル",
+    "speaker_name": "琴詠ニア",
+    "speaker_uuid": "97a4af4b-086e-4efd-b125-7ae2da85e697"
+  },
+  {
+    "style_id": 89,
+    "style_name": "ノーマル",
+    "speaker_name": "Voidoll",
+    "speaker_uuid": "0ebe2c7d-96f3-4f0e-a2e3-ae13fe27c403"
+  },
+  {
+    "style_id": 90,
+    "style_name": "ノーマル",
+    "speaker_name": "ぞん子",
+    "speaker_uuid": "0156da66-4300-474a-a398-49eb2e8dd853"
+  },
+  {
+    "style_id": 91,
+    "style_name": "低血圧",
+    "speaker_name": "ぞん子",
+    "speaker_uuid": "0156da66-4300-474a-a398-49eb2e8dd853"
+  },
+  {
+    "style_id": 92,
+    "style_name": "覚醒",
+    "speaker_name": "ぞん子",
+    "speaker_uuid": "0156da66-4300-474a-a398-49eb2e8dd853"
+  },
+  {
+    "style_id": 93,
+    "style_name": "実況風",
+    "speaker_name": "ぞん子",
+    "speaker_uuid": "0156da66-4300-474a-a398-49eb2e8dd853"
+  },
+  {
+    "style_id": 94,
+    "style_name": "ノーマル",
+    "speaker_name": "中部つるぎ",
+    "speaker_uuid": "4614a7de-9829-465d-9791-97eb8a5f9b86"
+  },
+  {
+    "style_id": 95,
+    "style_name": "怒り",
+    "speaker_name": "中部つるぎ",
+    "speaker_uuid": "4614a7de-9829-465d-9791-97eb8a5f9b86"
+  },
+  {
+    "style_id": 96,
+    "style_name": "ヒソヒソ",
+    "speaker_name": "中部つるぎ",
+    "speaker_uuid": "4614a7de-9829-465d-9791-97eb8a5f9b86"
+  },
+  {
+    "style_id": 97,
+    "style_name": "おどおど",
+    "speaker_name": "中部つるぎ",
+    "speaker_uuid": "4614a7de-9829-465d-9791-97eb8a5f9b86"
+  },
+  {
+    "style_id": 98,
+    "style_name": "絶望と敗北",
+    "speaker_name": "中部つるぎ",
+    "speaker_uuid": "4614a7de-9829-465d-9791-97eb8a5f9b86"
+  },
+  {
+    "style_id": 99,
+    "style_name": "ノーマル",
+    "speaker_name": "離途",
+    "speaker_uuid": "3b91e034-e028-4acb-a08d-fbdcd207ea63"
+  },
+  {
+    "style_id": 101,
+    "style_name": "シリアス",
+    "speaker_name": "離途",
+    "speaker_uuid": "3b91e034-e028-4acb-a08d-fbdcd207ea63"
+  },
+  {
+    "style_id": 100,
+    "style_name": "ノーマル",
+    "speaker_name": "黒沢冴白",
+    "speaker_uuid": "0b466290-f9b6-4718-8d37-6c0c81e824ac"
+  },
+  {
+    "style_id": 102,
+    "style_name": "ノーマル",
+    "speaker_name": "ユーレイちゃん",
+    "speaker_uuid": "462cd6b4-c088-42b0-b357-3816e24f112e"
+  },
+  {
+    "style_id": 103,
+    "style_name": "甘々",
+    "speaker_name": "ユーレイちゃん",
+    "speaker_uuid": "462cd6b4-c088-42b0-b357-3816e24f112e"
+  },
+  {
+    "style_id": 104,
+    "style_name": "哀しみ",
+    "speaker_name": "ユーレイちゃん",
+    "speaker_uuid": "462cd6b4-c088-42b0-b357-3816e24f112e"
+  },
+  {
+    "style_id": 105,
+    "style_name": "ささやき",
+    "speaker_name": "ユーレイちゃん",
+    "speaker_uuid": "462cd6b4-c088-42b0-b357-3816e24f112e"
+  },
+  {
+    "style_id": 106,
+    "style_name": "ツクモちゃん",
+    "speaker_name": "ユーレイちゃん",
+    "speaker_uuid": "462cd6b4-c088-42b0-b357-3816e24f112e"
+  },
+  {
+    "style_id": 107,
+    "style_name": "ノーマル",
+    "speaker_name": "東北ずん子",
+    "speaker_uuid": "80802b2d-8c75-4429-978b-515105017010"
+  },
+  {
+    "style_id": 108,
+    "style_name": "ノーマル",
+    "speaker_name": "東北きりたん",
+    "speaker_uuid": "1bd6b32b-d650-4072-bbe5-1d0ef4aaa28b"
+  },
+  {
+    "style_id": 109,
+    "style_name": "ノーマル",
+    "speaker_name": "東北イタコ",
+    "speaker_uuid": "ab4c31a3-8769-422a-b412-708f5ae637e8"
+  }
+]
