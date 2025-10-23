@@ -42,15 +42,19 @@ MODEL_CHOICES = {
         "claude-3-opus-20240229",
     ],
     "gemini": [
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-pro-latest",
         "gemini-pro",
     ],
 }
 PROVIDER_REQUIREMENTS = {
-    "openai": {"packages": ["openai"], "env_vars": ["OPENAI_API_KEY"]},
-    "anthropic": {"packages": ["anthropic"], "env_vars": ["ANTHROPIC_API_KEY"]},
-    "gemini": {"packages": ["google-generativeai"], "env_vars": ["GEMINI_API_KEY", "GOOGLE_API_KEY"]},
+    "openai": {"packages": ["openai"], "modules": ["openai"], "env_vars": ["OPENAI_API_KEY"]},
+    "anthropic": {"packages": ["anthropic"], "modules": ["anthropic"], "env_vars": ["ANTHROPIC_API_KEY"]},
+    "gemini": {
+        "packages": ["google-generativeai"],
+        "modules": ["google.generativeai"],
+        "env_vars": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    },
 }
 PROVIDER_ENV_PRIMARY = {
     "openai": "OPENAI_API_KEY",
@@ -107,19 +111,25 @@ def save_settings(provider: str, model: str, api_keys: dict[str, str]) -> None:
     )
 
 
-def _is_package_installed(package: str) -> bool:
-    """Return True if the given package can be resolved via import machinery."""
-    return importlib.util.find_spec(package) is not None
+def _is_module_importable(module: str) -> bool:
+    """Return True if the given module can be imported."""
+    return importlib.util.find_spec(module) is not None
 
 
 def check_provider_status(provider: str, cached_key: str = "") -> tuple[bool, list[str], bool]:
     """Check whether required packages and API keys exist for the provider."""
     req = PROVIDER_REQUIREMENTS.get(provider, {})
     packages = req.get("packages", [])
+    modules = req.get("modules", packages)
     env_vars = req.get("env_vars", [])
-    missing_pkgs = [pkg for pkg in packages if not _is_package_installed(pkg)]
+    missing: list[str] = []
+    for idx, pkg in enumerate(packages):
+        module = modules[idx] if idx < len(modules) else pkg
+        target = module or pkg
+        if target and not _is_module_importable(target):
+            missing.append(pkg or target)
     has_env = bool(cached_key) or (any(os.environ.get(var) for var in env_vars) if env_vars else True)
-    return (not missing_pkgs and has_env, missing_pkgs, has_env)
+    return (not missing and has_env, missing, has_env)
 
 
 def install_packages(packages: list[str]) -> bool:

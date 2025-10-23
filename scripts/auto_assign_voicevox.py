@@ -358,9 +358,6 @@ def main() -> None:
     """Run the full auto-assignment and optional synthesis pipeline."""
     args = parse_args()
 
-    if "OPENAI_API_KEY" not in os.environ:
-        raise SystemExit("OPENAI_API_KEY が設定されていません。export OPENAI_API_KEY=... を実行してください。")
-
     novel_path = Path(args.input)
     if not novel_path.exists():
         raise SystemExit(f"Input file not found: {novel_path}")

@@ -8,16 +8,15 @@ default, and allows future providers (e.g. Anthropic) to be added easily.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 
 
 class LLMClientError(RuntimeError):
     """Raised when an LLM provider is misconfigured."""
 
 
-@dataclass
 class BaseLLMClient:
-    model: str
+    def __init__(self, model: str) -> None:
+        self.model = model
 
     def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:  # pragma: no cover - interface only
         """Return the assistant response given system and user prompts."""
@@ -25,7 +24,8 @@ class BaseLLMClient:
 
 
 class OpenAIClient(BaseLLMClient):
-    def __post_init__(self) -> None:
+    def __init__(self, model: str) -> None:
+        super().__init__(model)
         """Initialise the OpenAI client."""
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
@@ -56,7 +56,8 @@ class OpenAIClient(BaseLLMClient):
 
 
 class AnthropicClient(BaseLLMClient):
-    def __post_init__(self) -> None:
+    def __init__(self, model: str) -> None:
+        super().__init__(model)
         """Initialise the Anthropic Claude client."""
         try:
             from anthropic import Anthropic  # type: ignore
@@ -91,11 +92,16 @@ class AnthropicClient(BaseLLMClient):
 
 
 class GeminiClient(BaseLLMClient):
-    def __post_init__(self) -> None:
+    def __init__(self, model: str) -> None:
+        super().__init__(model)
         """Initialise the Google Gemini client."""
+        self._generation_config_builder = lambda max_tokens: {"max_output_tokens": max_tokens}
         try:
             import google.generativeai as genai  # type: ignore
-            from google.generativeai.types import GenerationConfig  # type: ignore
+            try:
+                from google.generativeai.types import GenerationConfig as _GenerationConfig  # type: ignore
+            except Exception:  # noqa: BLE001
+                _GenerationConfig = None
         except Exception as exc:  # noqa: BLE001
             raise LLMClientError(
                 "google-generativeai パッケージが見つかりません。`pip install google-generativeai` を実行してください。"
@@ -107,17 +113,20 @@ class GeminiClient(BaseLLMClient):
 
         genai.configure(api_key=api_key)
         self._genai = genai
-        self._GenerationConfig = GenerationConfig
+        if _GenerationConfig is not None:
+            def builder(max_tokens: int) -> object:
+                return _GenerationConfig(max_output_tokens=max_tokens)  # type: ignore[arg-type]
+        else:
+            def builder(max_tokens: int) -> object:
+                return {"max_output_tokens": max_tokens}
+        self._generation_config_builder = builder
         self._model = genai.GenerativeModel(self.model)
 
     def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:
         """Request a Gemini response and return plain text."""
         prompt = f"[SYSTEM]\n{system}\n\n[USER]\n{user}"
-        generation_config = self._GenerationConfig(max_output_tokens=max_tokens)
-        response = self._model.generate_content(
-            prompt,
-            generation_config=generation_config,
-        )
+        generation_config = self._generation_config_builder(max_tokens)
+        response = self._model.generate_content(prompt, generation_config=generation_config)
         # google-generativeai exposes convenience property .text
         return (response.text or "").strip()
 
