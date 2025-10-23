@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import subprocess
@@ -53,6 +54,31 @@ class VoicevoxSpeaker:
 
 
 # ---------------------------------------------------------------------------
+# Logging
+
+
+def configure_logging(log_path: Optional[Path], level_name: str) -> None:
+    """Initialise console/file logging for the script."""
+    level = getattr(logging, level_name.upper(), logging.INFO)
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
+    root_logger.setLevel(level)
+    formatter = logging.Formatter("[%(asctime)s] %(levelname)s %(message)s")
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    root_logger.addHandler(stream_handler)
+
+    if log_path:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_path, encoding="utf-8")
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 
 
@@ -74,64 +100,134 @@ def extract_characters(
     text: str,
     max_characters: int,
     max_output_tokens: int,
+    max_retries: int = 2,
 ) -> List[CharacterCandidate]:
     """Use the configured LLM to extract character candidates from the text sample."""
     system = (
         "あなたは小説の登場人物を分析してJSONのみを返すアシスタントです。"
         "必ず有効なJSON配列だけを出力し、説明文は書かないでください。"
     )
-    if isinstance(client, GeminiClient):
-        system += (
-            "出力は厳密なJSON配列のみとし、コードブロックや余分な文字を一切含めないでください。"
-            "すべての文字列はダブルクオートで閉じ、改行や引用符は必要に応じてエスケープしてください。"
-        )
-    prompt = (
-        "以下の本文を読み、重要な登場人物を最大{limit}名抽出してください。\n"
-        "各要素は次のキーを持つオブジェクトです:\n"
-        "- name: キャラクター名（不明なら短い呼び名を仮に付ける）\n"
-        "- aliases: 代表的な呼び名の配列（無ければ空配列）\n"
-        "- role: 主人公/ヒロイン/敵役/家族/友人などの位置づけ\n"
-        "- gender: 男性/女性/不明 など\n"
-        "- age_hint: 年齢や年代の推定（例: 10代後半、成人、不明）\n"
-        "- personality: 性格の要約\n"
-        "- voice_hint: 声質や話し方について想像できるヒント（例: 落ち着いた低音）\n"
-        "JSON配列のみを返してください。本文:\n\n{text}\n"
-    ).format(limit=max_characters, text=text)
-    if isinstance(client, GeminiClient):
-        prompt += (
-            "\n# FORMAT RULES\n"
-            "- JSON以外の文字を出力しないでください。\n"
-            "- 各文字列は改行・引用符をエスケープし、必ず閉じてください。\n"
-            "- 各説明は簡潔にまとめ、全角60文字程度以内に収めてください。\n"
-        )
-
-    raw = client.chat(system, prompt, max_tokens=max_output_tokens)
-    raw_stripped = raw.strip()
-    if raw_stripped.startswith("```"):
-        raw_stripped = re.sub(r"^```[a-zA-Z]*", "", raw_stripped)
-        raw_stripped = raw_stripped.rstrip("`").strip()
-
-    try:
-        data = json.loads(raw_stripped)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Failed to decode character extraction JSON: {exc}\nRaw: {raw}") from exc
-
-    results: List[CharacterCandidate] = []
-    for item in data:
-        name = normalise_ws(item.get("name", ""))
-        if not name:
-            continue
-        results.append(
-            CharacterCandidate(
-                name=name,
-                role=normalise_ws(item.get("role", "")) or None,
-                gender=normalise_ws(item.get("gender", "")) or None,
-                age_hint=normalise_ws(item.get("age_hint", "")) or None,
-                personality=normalise_ws(item.get("personality", "")) or None,
-                voice_hint=normalise_ws(item.get("voice_hint", "")) or None,
+    attempts = max(1, max_retries)
+    last_error: Optional[Exception] = None
+    last_raw = ""
+    last_system_prompt: Optional[str] = None
+    last_user_prompt: Optional[str] = None
+    for attempt in range(attempts):
+        effective_max_tokens = max(256, max_output_tokens // (attempt + 1))
+        system_parts = [system]
+        prompt_parts = [
+            (
+                "以下の本文を読み、重要な登場人物を最大{limit}名抽出してください。\n"
+                "各要素は次のキーを持つオブジェクトです:\n"
+                "- name: キャラクター名（不明なら短い呼び名を仮に付ける）\n"
+                "- aliases: 代表的な呼び名の配列（無ければ空配列）\n"
+                "- role: 主人公/ヒロイン/敵役/家族/友人などの位置づけ\n"
+                "- gender: 男性/女性/不明 など\n"
+                "- age_hint: 年齢や年代の推定（例: 10代後半、成人、不明）\n"
+                "- personality: 性格の要約\n"
+                "- voice_hint: 声質や話し方について想像できるヒント（例: 落ち着いた低音）\n"
+                "JSON配列のみを返してください。本文:\n\n{text}\n"
+            ).format(limit=max_characters, text=text)
+        ]
+        if isinstance(client, GeminiClient):
+            system_parts.append(
+                "出力は厳密なJSON配列のみとし、コードブロックや余分な文字を一切含めないでください。"
+                "すべての文字列はダブルクオートで閉じ、改行や引用符は必要に応じてエスケープしてください。"
             )
-        )
-    return results
+            prompt_parts.append(
+                "\n# FORMAT RULES\n"
+                "- JSON以外の文字を出力しないでください。\n"
+                "- 各文字列は改行・引用符をエスケープし、必ず閉じてください。\n"
+                "- 各説明は簡潔にまとめ、全角60文字程度以内に収めてください。\n"
+            )
+        if attempt > 0:
+            system_parts.append(
+                "直前の応答が不正なJSONでした。今回は有効なJSON配列のみを出力してください。"
+                "各フィールドの内容は非常に短く（最大30文字程度）まとめ、途中で文章を切らないでください。"
+            )
+            prompt_parts.append(
+                "\n# RETRY NOTICE\n"
+                "先ほどの回答はJSONとして解析できませんでした。"
+                "必ず完全なJSON配列のみを出力し、途中で文を切らないでください。\n"
+                "- 各文字列は最大30文字程度に収めてください。\n"
+                "- 詳細説明は省略し、要点のみ記述してください。\n"
+            )
+
+        system_prompt = "".join(system_parts)
+        prompt = "".join(prompt_parts)
+        last_system_prompt = system_prompt
+        last_user_prompt = prompt
+
+        try:
+            raw = client.chat(system_prompt, prompt, max_tokens=effective_max_tokens)
+        except LLMClientError as chat_exc:
+            last_error = chat_exc
+            last_raw = ""
+            logging.warning("Gemini chat call failed: %s", chat_exc)
+            continue
+        raw_stripped = raw.strip()
+        if raw_stripped.startswith("```"):
+            raw_stripped = re.sub(r"^```[a-zA-Z]*", "", raw_stripped)
+            raw_stripped = raw_stripped.rstrip("`").strip()
+
+        try:
+            data = json.loads(raw_stripped)
+            results: List[CharacterCandidate] = []
+            for item in data:
+                name = normalise_ws(item.get("name", ""))
+                if not name:
+                    continue
+                results.append(
+                    CharacterCandidate(
+                        name=name,
+                        role=normalise_ws(item.get("role", "")) or None,
+                        gender=normalise_ws(item.get("gender", "")) or None,
+                        age_hint=normalise_ws(item.get("age_hint", "")) or None,
+                        personality=normalise_ws(item.get("personality", "")) or None,
+                        voice_hint=normalise_ws(item.get("voice_hint", "")) or None,
+                    )
+                )
+            return results
+        except json.JSONDecodeError as exc:
+            last_error = exc
+            last_raw = raw
+            logging.warning(
+                "Failed to decode character JSON (attempt %s/%s). Retrying...",
+                attempt + 1,
+                attempts,
+            )
+            continue
+
+    if isinstance(client, GeminiClient) and last_system_prompt and last_user_prompt:
+        logging.info("Gemini chat failed; trying raw_generate fallback for character extraction.")
+        try:
+            raw = client.raw_generate(f"{last_system_prompt}\n\n{last_user_prompt}")
+            raw_stripped = raw.strip()
+            if raw_stripped.startswith("```"):
+                raw_stripped = re.sub(r"^```[a-zA-Z]*", "", raw_stripped)
+                raw_stripped = raw_stripped.rstrip("`").strip()
+            data = json.loads(raw_stripped)
+            results = []
+            for item in data:
+                name = normalise_ws(item.get("name", ""))
+                if not name:
+                    continue
+                results.append(
+                    CharacterCandidate(
+                        name=name,
+                        role=normalise_ws(item.get("role", "")) or None,
+                        gender=normalise_ws(item.get("gender", "")) or None,
+                        age_hint=normalise_ws(item.get("age_hint", "")) or None,
+                        personality=normalise_ws(item.get("personality", "")) or None,
+                        voice_hint=normalise_ws(item.get("voice_hint", "")) or None,
+                    )
+                )
+            logging.info("Gemini raw_generate fallback succeeded for character extraction.")
+            return results
+        except Exception as fallback_exc:  # noqa: BLE001
+            logging.warning("Gemini raw_generate fallback failed: %s", fallback_exc, exc_info=True)
+
+    raise RuntimeError(f"Failed to decode character extraction JSON: {last_error}\nRaw: {last_raw}") from last_error
 
 
 def load_voicevox_speakers(profiles_path: Path, speakers_json_path: Path) -> List[VoicevoxSpeaker]:
@@ -181,6 +277,7 @@ def map_characters_to_voices(
     characters: List[CharacterCandidate],
     speakers: List[VoicevoxSpeaker],
     max_output_tokens: int,
+    max_retries: int = 2,
 ) -> List[Dict[str, str]]:
     """Ask the LLM to choose the most suitable VOICEVOX voice for each character."""
     system = (
@@ -229,29 +326,82 @@ def map_characters_to_voices(
         speakers=json.dumps(speaker_payload, ensure_ascii=False, indent=2),
     )
 
-    if isinstance(client, GeminiClient):
-        system += (
-            "出力は厳密なJSON配列のみで、コードブロックや余分なテキストを含めないでください。"
-            "文字列は必ず閉じ、改行や引用符は必要に応じてエスケープしてください。"
-        )
-        user_prompt += (
-            "\n# FORMAT RULES\n"
-            "- JSON以外の文字を絶対に出力しないこと。\n"
-            "- 文字列は改行・引用符をエスケープし、必ず閉じてください。\n"
-            "- 各説明や理由は短く、全角60文字程度以内に要約してください。\n"
-            "- rationale には最大1文（60文字以内）だけを書いてください。\n"
-        )
-    raw = client.chat(system, user_prompt, max_tokens=max_output_tokens)
-    raw_stripped = raw.strip()
-    if raw_stripped.startswith("```"):
-        raw_stripped = re.sub(r"^```[a-zA-Z]*", "", raw_stripped)
-        raw_stripped = raw_stripped.rstrip("`").strip()
+    attempts = max(1, max_retries)
+    last_error: Optional[Exception] = None
+    last_raw = ""
+    last_system_prompt: Optional[str] = None
+    last_prompt_text: Optional[str] = None
+    for attempt in range(attempts):
+        effective_max_tokens = max(256, max_output_tokens // (attempt + 1))
+        system_prompt = system
+        prompt_text = user_prompt
+        if isinstance(client, GeminiClient):
+            system_prompt += (
+                "出力は厳密なJSON配列のみで、コードブロックや余分なテキストを含めないでください。"
+                "文字列は必ず閉じ、改行や引用符は必要に応じてエスケープしてください。"
+            )
+            prompt_text += (
+                "\n# FORMAT RULES\n"
+                "- JSON以外の文字を絶対に出力しないこと。\n"
+                "- 文字列は改行・引用符をエスケープし、必ず閉じてください。\n"
+                "- 各説明や理由は短く、全角60文字程度以内に要約してください。\n"
+                "- rationale には最大1文（60文字以内）だけを書いてください。\n"
+            )
+        if attempt > 0:
+            system_prompt += (
+                "直前の応答が不正なJSONでした。今回は完全なJSON配列のみを出力してください。"
+                "各文字列は最大30文字程度に短縮し、説明は1文に収めてください。"
+            )
+            prompt_text += (
+                "\n# RETRY NOTICE\n"
+                "前回の回答はJSONとして解析できませんでした。"
+                "必ず完全なJSON配列のみを返してください。\n"
+                "- 文字列は30文字程度に制限してください。\n"
+                "- rationale は短く1文のみ記述してください。\n"
+            )
 
-    try:
-        data = json.loads(raw_stripped)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Failed to decode mapping JSON: {exc}\nRaw: {raw}") from exc
-    return data
+        last_system_prompt = system_prompt
+        last_prompt_text = prompt_text
+
+        try:
+            raw = client.chat(system_prompt, prompt_text, max_tokens=effective_max_tokens)
+        except LLMClientError as chat_exc:
+            last_error = chat_exc
+            last_raw = ""
+            logging.warning("Gemini chat call failed during mapping: %s", chat_exc)
+            continue
+        raw_stripped = raw.strip()
+        if raw_stripped.startswith("```"):
+            raw_stripped = re.sub(r"^```[a-zA-Z]*", "", raw_stripped)
+            raw_stripped = raw_stripped.rstrip("`").strip()
+
+        try:
+            return json.loads(raw_stripped)
+        except json.JSONDecodeError as exc:
+            last_error = exc
+            last_raw = raw
+            logging.warning(
+                "Failed to decode mapping JSON (attempt %s/%s). Retrying...",
+                attempt + 1,
+                attempts,
+            )
+            continue
+
+    if isinstance(client, GeminiClient) and last_system_prompt and last_prompt_text:
+        logging.info("Gemini chat failed; trying raw_generate fallback for voice mapping.")
+        try:
+            raw = client.raw_generate(f"{last_system_prompt}\n\n{last_prompt_text}")
+            raw_stripped = raw.strip()
+            if raw_stripped.startswith("```"):
+                raw_stripped = re.sub(r"^```[a-zA-Z]*", "", raw_stripped)
+                raw_stripped = raw_stripped.rstrip("`").strip()
+            data = json.loads(raw_stripped)
+            logging.info("Gemini raw_generate fallback succeeded for voice mapping.")
+            return data
+        except Exception as fallback_exc:  # noqa: BLE001
+            logging.warning("Gemini raw_generate fallback failed: %s", fallback_exc, exc_info=True)
+
+    raise RuntimeError(f"Failed to decode mapping JSON: {last_error}\nRaw: {last_raw}") from last_error
 
 
 def build_assignments_yaml(
@@ -337,7 +487,13 @@ def build_assignments_yaml(
     out_path.write_text(yaml.safe_dump(yaml_payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
 
 
-def run_novel_to_voicevox(novel_path: Path, assignments_path: Path, model: str, outdir: Path) -> None:
+def run_novel_to_voicevox(
+    novel_path: Path,
+    assignments_path: Path,
+    provider: str,
+    model: str,
+    outdir: Path,
+) -> None:
     """Invoke the secondary pipeline to synthesise audio clips using the generated YAML."""
     cmd = [
         sys.executable,
@@ -348,10 +504,12 @@ def run_novel_to_voicevox(novel_path: Path, assignments_path: Path, model: str, 
         str(assignments_path),
         "--outdir",
         str(outdir),
+        "--llm-provider",
+        provider,
         "--model",
         model,
     ]
-    print("Running:", " ".join(cmd))
+    logging.info("Running novel_to_voicevox: %s", " ".join(cmd))
     subprocess.run(cmd, check=True)
 
 
@@ -386,6 +544,22 @@ def parse_args() -> argparse.Namespace:
         default=2000,
         help="話者マッピング時にLLMへ許可する最大出力トークン数",
     )
+    parser.add_argument(
+        "--llm-retries",
+        type=int,
+        default=2,
+        help="LLM 応答をJSONとして解析できなかった場合の最大リトライ回数",
+    )
+    parser.add_argument(
+        "--log-file",
+        default="",
+        help="実行ログを書き出すファイルパス（未指定時は出力先artifactsに auto_assign.log を生成）",
+    )
+    parser.add_argument(
+        "--log-level",
+        default=os.environ.get("LOG_LEVEL", "INFO"),
+        help="ログレベル（DEBUG, INFO, WARNING, ERROR, CRITICAL）",
+    )
     parser.add_argument("--max-characters", type=int, default=6, help="抽出する最大キャラクター数")
     parser.add_argument("--sample-chars", type=int, default=6000, help="本文の先頭からLLMに渡す文字数 (0で全文)")
     parser.add_argument("--profiles", default="data/voicevox_speaker_profiles.yaml", help="VOICEVOX話者のプロフィールYAML")
@@ -403,6 +577,17 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Run the full auto-assignment and optional synthesis pipeline."""
     args = parse_args()
+
+    log_path: Optional[Path] = None
+    if args.log_file:
+        log_path = Path(args.log_file).expanduser()
+    elif args.synthesis_outdir:
+        log_path = Path(args.synthesis_outdir) / "artifacts" / "auto_assign.log"
+
+    configure_logging(log_path, args.log_level)
+    logging.info("auto_assign_voicevox started with provider=%s model=%s", args.llm_provider, args.model)
+    if log_path:
+        logging.info("Logging to %s", log_path)
 
     novel_path = Path(args.input)
     if not novel_path.exists():
@@ -424,6 +609,7 @@ def main() -> None:
             text_segment,
             args.max_characters,
             args.extract_max_output_tokens,
+            args.llm_retries,
         )
     except LLMClientError as exc:
         raise SystemExit(str(exc))
@@ -437,7 +623,7 @@ def main() -> None:
         json.dumps([c.__dict__ for c in characters], ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    print(f"Extracted {len(characters)} characters -> {characters_out}")
+    logging.info("Extracted %s characters -> %s", len(characters), characters_out)
 
     speakers = load_voicevox_speakers(Path(args.profiles), speakers_json)
     try:
@@ -446,13 +632,14 @@ def main() -> None:
             characters,
             speakers,
             args.mapping_max_output_tokens,
+            args.llm_retries,
         )
     except LLMClientError as exc:
         raise SystemExit(str(exc))
 
     mapping_out = Path(args.mapping_json_out)
     mapping_out.write_text(json.dumps(mapping_data, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"Voice mapping saved -> {mapping_out}")
+    logging.info("Voice mapping saved -> %s", mapping_out)
 
     assignments_path = Path(args.assignments_out)
     narration_name = args.narration_name.strip() or None
@@ -464,10 +651,18 @@ def main() -> None:
         narration_style_id=args.narration_style_id if narration_name else None,
         narration_speaker=args.narration_speaker.strip() or None,
     )
-    print(f"Assignments YAML generated -> {assignments_path}")
+    logging.info("Assignments YAML generated -> %s", assignments_path)
 
     if not args.skip_synthesis:
-        run_novel_to_voicevox(novel_path, assignments_path, args.model, Path(args.synthesis_outdir))
+        run_novel_to_voicevox(
+            novel_path,
+            assignments_path,
+            args.llm_provider,
+            args.model,
+            Path(args.synthesis_outdir),
+        )
+    else:
+        logging.info("Synthesis skipped (--skip-synthesis specified).")
 
 
 if __name__ == "__main__":

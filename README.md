@@ -89,6 +89,9 @@
    ```
    - `--skip-synthesis` を付ければ割当YAMLのみ生成。
    - Gemini など出力が長すぎて打ち切られる場合は `--extract-max-output-tokens` / `--mapping-max-output-tokens` で LLM の最大出力トークン数を下げると安定しやすくなります（例: `--extract-max-output-tokens 1200`）。
+   - JSON 解析が失敗する場合は `--llm-retries` で再試行回数を増やせます（デフォルト 2）。
+   - `--log-file` を指定すると実行ログを任意ファイルへ出力できます（未指定時は出力先 `artifacts/auto_assign.log` に保存）。`--log-level` でログ詳細度も調整可能です。
+   - Gemini プロバイダ利用時は、公式クォータ指針に合わせて 1 リクエストあたり最大 250,000 トークンまで生成を許可する設定になっています。それでも応答が途中で途切れる場合は、テキストを短く分割するか他モデル（OpenAI / Anthropic など）を選択してください。
 - LLMを切り替える場合は `--llm-provider` / `--model` を指定（環境変数 `LLM_PROVIDER`, `LLM_MODEL` でも可）。
    - 抽出結果は `output/artifacts/extracted_characters.json`、マッピングは `output/artifacts/character_voice_mapping.json`。
 4. 既存割当を使って合成だけ実行したい場合

@@ -91,11 +91,15 @@ class AnthropicClient(BaseLLMClient):
         return "\n".join(parts).strip()
 
 
+GEMINI_DEFAULT_MAX_OUTPUT_TOKENS = 250_000
+
+
 class GeminiClient(BaseLLMClient):
     def __init__(self, model: str) -> None:
         super().__init__(model)
         """Initialise the Google Gemini client."""
-        self._generation_config_builder = lambda max_tokens: {"max_output_tokens": max_tokens}
+        self._default_max_output_tokens = GEMINI_DEFAULT_MAX_OUTPUT_TOKENS
+        self._generation_config_builder = lambda max_tokens: {"max_output_tokens": max(self._default_max_output_tokens, max_tokens or 0)}
         try:
             import google.generativeai as genai  # type: ignore
             try:
@@ -113,12 +117,17 @@ class GeminiClient(BaseLLMClient):
 
         genai.configure(api_key=api_key)
         self._genai = genai
+        def resolve_tokens(max_tokens: int | None) -> int:
+            if not max_tokens or max_tokens <= 0:
+                return self._default_max_output_tokens
+            return max(max_tokens, self._default_max_output_tokens)
+
         if _GenerationConfig is not None:
-            def builder(max_tokens: int) -> object:
-                return _GenerationConfig(max_output_tokens=max_tokens)  # type: ignore[arg-type]
+            def builder(max_tokens: int | None) -> object:
+                return _GenerationConfig(max_output_tokens=resolve_tokens(max_tokens))  # type: ignore[arg-type]
         else:
-            def builder(max_tokens: int) -> object:
-                return {"max_output_tokens": max_tokens}
+            def builder(max_tokens: int | None) -> object:
+                return {"max_output_tokens": resolve_tokens(max_tokens)}
         self._generation_config_builder = builder
         actual_model_name = self.model if self.model.startswith("models/") else f"models/{self.model}"
         self._model = genai.GenerativeModel(actual_model_name)
@@ -143,6 +152,23 @@ class GeminiClient(BaseLLMClient):
             raise LLMClientError(
                 f"Gemini 応答が空でした (finish_reason={finish_reason}). 出力トークン数を減らすか、短く要約してください。"
             )
+        return "\n".join(texts).strip()
+
+    def raw_generate(self, prompt: str, max_tokens: Optional[int] = None) -> str:
+        """Call Gemini with raw prompt text using generate_content directly."""
+        generation_config = self._generation_config_builder(max_tokens)
+        response = self._model.generate_content(prompt, generation_config=generation_config)
+        texts: list[str] = []
+        for candidate in getattr(response, "candidates", []) or []:
+            content = getattr(candidate, "content", None)
+            if not content:
+                continue
+            for part in getattr(content, "parts", []) or []:
+                text = getattr(part, "text", None)
+                if text:
+                    texts.append(text)
+        if not texts:
+            raise LLMClientError("Gemini 応答が空でした (raw_generate).")
         return "\n".join(texts).strip()
 
 
