@@ -15,7 +15,12 @@ from typing import Dict, List, Optional
 
 import yaml
 
-from scripts.llm_client import LLMClientError, create_llm_client
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.llm_client import BaseLLMClient, LLMClientError, GeminiClient, create_llm_client
 
 
 # ---------------------------------------------------------------------------
@@ -64,12 +69,22 @@ def normalise_ws(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip())
 
 
-def extract_characters(client: OpenAIClient, text: str, max_characters: int) -> List[CharacterCandidate]:
+def extract_characters(
+    client: BaseLLMClient,
+    text: str,
+    max_characters: int,
+    max_output_tokens: int,
+) -> List[CharacterCandidate]:
     """Use the configured LLM to extract character candidates from the text sample."""
     system = (
         "あなたは小説の登場人物を分析してJSONのみを返すアシスタントです。"
         "必ず有効なJSON配列だけを出力し、説明文は書かないでください。"
     )
+    if isinstance(client, GeminiClient):
+        system += (
+            "出力は厳密なJSON配列のみとし、コードブロックや余分な文字を一切含めないでください。"
+            "すべての文字列はダブルクオートで閉じ、改行や引用符は必要に応じてエスケープしてください。"
+        )
     prompt = (
         "以下の本文を読み、重要な登場人物を最大{limit}名抽出してください。\n"
         "各要素は次のキーを持つオブジェクトです:\n"
@@ -82,8 +97,15 @@ def extract_characters(client: OpenAIClient, text: str, max_characters: int) -> 
         "- voice_hint: 声質や話し方について想像できるヒント（例: 落ち着いた低音）\n"
         "JSON配列のみを返してください。本文:\n\n{text}\n"
     ).format(limit=max_characters, text=text)
+    if isinstance(client, GeminiClient):
+        prompt += (
+            "\n# FORMAT RULES\n"
+            "- JSON以外の文字を出力しないでください。\n"
+            "- 各文字列は改行・引用符をエスケープし、必ず閉じてください。\n"
+            "- 各説明は簡潔にまとめ、全角60文字程度以内に収めてください。\n"
+        )
 
-    raw = client.chat(system, prompt, max_tokens=1800)
+    raw = client.chat(system, prompt, max_tokens=max_output_tokens)
     raw_stripped = raw.strip()
     if raw_stripped.startswith("```"):
         raw_stripped = re.sub(r"^```[a-zA-Z]*", "", raw_stripped)
@@ -155,10 +177,10 @@ def load_voicevox_speakers(profiles_path: Path, speakers_json_path: Path) -> Lis
 
 
 def map_characters_to_voices(
-    client: OpenAIClient,
+    client: BaseLLMClient,
     characters: List[CharacterCandidate],
     speakers: List[VoicevoxSpeaker],
-    max_tokens: int = 2000,
+    max_output_tokens: int,
 ) -> List[Dict[str, str]]:
     """Ask the LLM to choose the most suitable VOICEVOX voice for each character."""
     system = (
@@ -207,7 +229,19 @@ def map_characters_to_voices(
         speakers=json.dumps(speaker_payload, ensure_ascii=False, indent=2),
     )
 
-    raw = client.chat(system, user_prompt, max_tokens=max_tokens)
+    if isinstance(client, GeminiClient):
+        system += (
+            "出力は厳密なJSON配列のみで、コードブロックや余分なテキストを含めないでください。"
+            "文字列は必ず閉じ、改行や引用符は必要に応じてエスケープしてください。"
+        )
+        user_prompt += (
+            "\n# FORMAT RULES\n"
+            "- JSON以外の文字を絶対に出力しないこと。\n"
+            "- 文字列は改行・引用符をエスケープし、必ず閉じてください。\n"
+            "- 各説明や理由は短く、全角60文字程度以内に要約してください。\n"
+            "- rationale には最大1文（60文字以内）だけを書いてください。\n"
+        )
+    raw = client.chat(system, user_prompt, max_tokens=max_output_tokens)
     raw_stripped = raw.strip()
     if raw_stripped.startswith("```"):
         raw_stripped = re.sub(r"^```[a-zA-Z]*", "", raw_stripped)
@@ -340,6 +374,18 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("LLM_PROVIDER", "openai"),
         help="利用するLLMプロバイダ (openai, anthropic など)",
     )
+    parser.add_argument(
+        "--extract-max-output-tokens",
+        type=int,
+        default=1800,
+        help="登場人物抽出時にLLMへ許可する最大出力トークン数",
+    )
+    parser.add_argument(
+        "--mapping-max-output-tokens",
+        type=int,
+        default=2000,
+        help="話者マッピング時にLLMへ許可する最大出力トークン数",
+    )
     parser.add_argument("--max-characters", type=int, default=6, help="抽出する最大キャラクター数")
     parser.add_argument("--sample-chars", type=int, default=6000, help="本文の先頭からLLMに渡す文字数 (0で全文)")
     parser.add_argument("--profiles", default="data/voicevox_speaker_profiles.yaml", help="VOICEVOX話者のプロフィールYAML")
@@ -372,7 +418,15 @@ def main() -> None:
         raise SystemExit(str(exc))
 
     text_segment = read_text_segment(novel_path, args.sample_chars)
-    characters = extract_characters(client, text_segment, args.max_characters)
+    try:
+        characters = extract_characters(
+            client,
+            text_segment,
+            args.max_characters,
+            args.extract_max_output_tokens,
+        )
+    except LLMClientError as exc:
+        raise SystemExit(str(exc))
 
     if not characters:
         raise SystemExit("LLM が登場人物を抽出できませんでした。テキストを短くするか、max-characters を増やしてください。")
@@ -386,7 +440,15 @@ def main() -> None:
     print(f"Extracted {len(characters)} characters -> {characters_out}")
 
     speakers = load_voicevox_speakers(Path(args.profiles), speakers_json)
-    mapping_data = map_characters_to_voices(client, characters, speakers)
+    try:
+        mapping_data = map_characters_to_voices(
+            client,
+            characters,
+            speakers,
+            args.mapping_max_output_tokens,
+        )
+    except LLMClientError as exc:
+        raise SystemExit(str(exc))
 
     mapping_out = Path(args.mapping_json_out)
     mapping_out.write_text(json.dumps(mapping_data, ensure_ascii=False, indent=2), encoding="utf-8")

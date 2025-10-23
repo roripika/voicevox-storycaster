@@ -12,7 +12,12 @@ from pathlib import Path
 
 # Optional deps: pyyaml
 
-from scripts.llm_client import LLMClientError, create_llm_client
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.llm_client import BaseLLMClient, GeminiClient, LLMClientError, create_llm_client
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -58,25 +63,73 @@ def normalize_name(name: str) -> str:
     return s
 
 
-def chunk_text(text: str, approx_chars: int = 4000):
-    """Yield the supplied text split into blocks around ``approx_chars`` characters."""
-    # Split by paragraphs to keep boundaries, then group until reaching approx_chars
-    paras = re.split(r"\n\n+", text)
-    chunk = []
-    size = 0
-    for p in paras:
-        p2 = p.strip()
-        if not p2:
+def normalize_text_for_merge(text: str) -> str:
+    """Normalise text to match duplicate lines across overlapping chunks."""
+    s = text.strip()
+    s = re.sub(r"\s+", "", s)
+    return s
+
+
+SENTENCE_END_RE = re.compile(r"([。．！？!?]+[」』］】]?|…+)")
+
+
+def split_sentences(text: str) -> list[str]:
+    """Split ``text`` into sentences while preserving sentence-ending punctuation."""
+    segments: list[str] = []
+    buffer = ""
+    parts = SENTENCE_END_RE.split(text)
+    for idx, part in enumerate(parts):
+        if part is None:
             continue
-        if size + len(p2) > approx_chars and chunk:
-            yield "\n\n".join(chunk)
-            chunk = [p2]
-            size = len(p2)
+        if idx % 2 == 0:
+            buffer += part
         else:
-            chunk.append(p2)
-            size += len(p2)
+            buffer += part
+            sentence = buffer.strip()
+            if sentence:
+                segments.append(sentence)
+            buffer = ""
+    tail = buffer.strip()
+    if tail:
+        segments.append(tail)
+    return segments
+
+
+def chunk_text(text: str, approx_chars: int = 4000, overlap_sentences: int = 0):
+    """Yield blocks of text close to ``approx_chars`` characters, split by sentence."""
+    if overlap_sentences < 0:
+        raise ValueError("overlap_sentences must be >= 0")
+    sentences = split_sentences(text)
+    chunk: list[str] = []
+    size = 0
+    overlap_prefix = 0
+    idx = 0
+    total = len(sentences)
+    while idx < total:
+        sent = sentences[idx].strip()
+        if not sent:
+            idx += 1
+            continue
+        if size and size + len(sent) > approx_chars and chunk:
+            yield "\n".join(chunk), overlap_prefix
+            if overlap_sentences:
+                chunk = chunk[-overlap_sentences:]
+                overlap_prefix = len(chunk)
+                size = sum(len(x) for x in chunk)
+            else:
+                chunk = []
+                overlap_prefix = 0
+                size = 0
+            continue  # reprocess current sentence with refreshed chunk
+        chunk.append(sent)
+        size += len(sent)
+        if overlap_prefix and len(chunk) > overlap_prefix:
+            overlap_prefix = min(overlap_prefix, len(chunk))
+        elif overlap_prefix == 0:
+            overlap_prefix = 0
+        idx += 1
     if chunk:
-        yield "\n\n".join(chunk)
+        yield "\n".join(chunk), overlap_prefix
 
 
 def build_prompt(allowed_names, narration_label: str, sample_count: int = 3) -> str:
@@ -108,7 +161,14 @@ def build_prompt(allowed_names, narration_label: str, sample_count: int = 3) -> 
 """
 
 
-def call_llm_attribution(client, allowed_names, narration_label: str, chunk_text: str, system_note: str) -> list:
+def call_llm_attribution(
+    client: BaseLLMClient,
+    allowed_names,
+    narration_label: str,
+    chunk_text: str,
+    system_note: str,
+    max_output_tokens: int,
+) -> list:
     """Call the LLM to attribute each line in ``chunk_text`` to a speaker."""
     prompt = build_prompt(allowed_names, narration_label)
     user_prompt = (
@@ -116,15 +176,26 @@ def call_llm_attribution(client, allowed_names, narration_label: str, chunk_text
         f"[TEXT]\n{chunk_text}\n\n"
         f"[INSTRUCTIONS]\n上記テキストを JSON Lines で出力してください。"
     )
-    raw = client.chat(
-        system="あなたは厳密にJSON Linesのみを出力する補助AIです。",
-        user=user_prompt,
-        max_tokens=1500,
-    )
+    system_prompt = "あなたは厳密にJSON Linesのみを出力する補助AIです。"
+    if isinstance(client, GeminiClient):
+        system_prompt += (
+            "出力はJSON Linesのみに限定し、コードブロックや余分なテキストを含めないでください。"
+            "各行のJSON文字列は必ず閉じ、改行や引用符は必要に応じてエスケープしてください。"
+        )
+        user_prompt += (
+            "\n# FORMAT RULES\n"
+            "- JSON以外の文字を出力しないこと。\n"
+            "- 各行は完全なJSONオブジェクトで終わらせてください。\n"
+            "- コードブロック記法や説明文は追加しないでください。\n"
+            "- 各テキストは必要最小限に要約し、全角80文字程度以内にしてください。\n"
+        )
+    raw = client.chat(system=system_prompt, user=user_prompt, max_tokens=max_output_tokens)
     lines = []
     for ln in raw.splitlines():
         ln2 = ln.strip()
         if not ln2:
+            continue
+        if ln2.startswith("```"):
             continue
         try:
             obj = json.loads(ln2)
@@ -214,7 +285,19 @@ def main():
         default=os.environ.get("LLM_PROVIDER", "openai"),
         help="LLM provider identifier (openai, anthropic など)",
     )
+    ap.add_argument(
+        "--llm-max-output-tokens",
+        type=int,
+        default=1500,
+        help="LLM 応答に許可する最大出力トークン数",
+    )
     ap.add_argument("--chunk-chars", type=int, default=4000, help="Approx chars per LLM chunk")
+    ap.add_argument(
+        "--chunk-overlap-sentences",
+        type=int,
+        default=1,
+        help="Number of trailing sentences to carry into the next chunk for context",
+    )
     ap.add_argument("--dry-run", action="store_true", help="Do not call VOICEVOX, only produce JSONL assignments")
 
     args = ap.parse_args()
@@ -286,11 +369,42 @@ def main():
 
     # Iterate chunks
     all_lines = []
+    known_line_assignments: dict[str, tuple[str, str]] = {}
     chunk_idx = 0
-    for chunk in chunk_text(text, approx_chars=args.chunk_chars):
+    for chunk_text_block, overlap_prefix in chunk_text(
+        text,
+        approx_chars=args.chunk_chars,
+        overlap_sentences=args.chunk_overlap_sentences,
+    ):
         chunk_idx += 1
         eprint(f"Processing chunk {chunk_idx}...")
-        lines = call_llm_attribution(client, allowed_names, narration_label, chunk, system_note)
+        lines = call_llm_attribution(
+            client,
+            allowed_names,
+            narration_label,
+            chunk_text_block,
+            system_note,
+            args.llm_max_output_tokens,
+        )
+        if overlap_prefix:
+            lines = lines[overlap_prefix:]
+        # Apply merge heuristics using previously seen lines
+        for obj in lines:
+            text_line = obj.get("text", "")
+            norm_key = normalize_text_for_merge(text_line)
+            if not norm_key:
+                continue
+            prev = known_line_assignments.get(norm_key)
+            speaker = obj.get("speaker_name")
+            line_type = obj.get("type")
+            if prev:
+                if speaker != prev[0]:
+                    obj["speaker_name"] = prev[0]
+                if line_type != prev[1]:
+                    obj["type"] = prev[1]
+            elif speaker and line_type:
+                known_line_assignments[norm_key] = (speaker, line_type)
+
         # annotate with chunk index
         for i, obj in enumerate(lines, start=1):
             obj["chunk_index"] = chunk_idx

@@ -34,6 +34,7 @@
    - 作品タイトルと本文を貼り付けて「音声生成を実行」を押すだけで、配役決定→音声生成→結合→出力フォルダ表示まで自動で実行されます。
    - Windows の場合は `RunVoicevoxGUI_win.ps1` をダブルクリック（WSLg もしくは X サーバーが必要）。
    - 画面左下の「設定」ボタンから LLM プロバイダとモデルを変更できます（OpenAI, Anthropic, Gemini など）。設定は `config/llm_settings.json` に保存され、次回起動時に復元されます。
+   - **注意:** Finder から `.command` を実行した場合は `~/.zshrc` などのシェル設定が読み込まれないため、OpenAI 等の API キーは必ず GUI の設定画面で保存してください（または `launchctl setenv` などでシステム環境変数として登録してください）。
 3. **生成物**
    - `output_gui/タイトル_タイムスタンプ/` に、行単位のWAV、結合済みWAV、動作ログ、割当YAMLが保存されます。
 4. **やり直す場合**
@@ -87,12 +88,15 @@
    python scripts/auto_assign_voicevox.py --input novel.txt --assignments-out config/voice_assignments_auto.yaml
    ```
    - `--skip-synthesis` を付ければ割当YAMLのみ生成。
+   - Gemini など出力が長すぎて打ち切られる場合は `--extract-max-output-tokens` / `--mapping-max-output-tokens` で LLM の最大出力トークン数を下げると安定しやすくなります（例: `--extract-max-output-tokens 1200`）。
 - LLMを切り替える場合は `--llm-provider` / `--model` を指定（環境変数 `LLM_PROVIDER`, `LLM_MODEL` でも可）。
    - 抽出結果は `output/artifacts/extracted_characters.json`、マッピングは `output/artifacts/character_voice_mapping.json`。
 4. 既存割当を使って合成だけ実行したい場合
    ```bash
    python scripts/novel_to_voicevox.py --input novel.txt --assignments config/voice_assignments_auto.yaml --outdir output_manual
    ```
+   - 必要に応じて `--llm-max-output-tokens` を指定すると、Gemini などで JSON Lines が途切れる問題を回避できます。
+   - 長文では `--chunk-chars` に加えて `--chunk-overlap-sentences` を指定すると、チャンク間で直前の文脈を共有しつつ処理できます（例: `--chunk-overlap-sentences 2`）。
 5. 音声を結合
    ```bash
    python scripts/merge_voicevox_audio.py --manifest output_manual/artifacts/manifest.json --out output_manual/novel.wav

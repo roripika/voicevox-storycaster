@@ -128,8 +128,22 @@ class GeminiClient(BaseLLMClient):
         prompt = f"[SYSTEM]\n{system}\n\n[USER]\n{user}"
         generation_config = self._generation_config_builder(max_tokens)
         response = self._model.generate_content(prompt, generation_config=generation_config)
-        # google-generativeai exposes convenience property .text
-        return (response.text or "").strip()
+        texts: list[str] = []
+        finish_reason = None
+        for candidate in getattr(response, "candidates", []) or []:
+            finish_reason = getattr(candidate, "finish_reason", None) or finish_reason
+            content = getattr(candidate, "content", None)
+            if not content:
+                continue
+            for part in getattr(content, "parts", []) or []:
+                text = getattr(part, "text", None)
+                if text:
+                    texts.append(text)
+        if not texts:
+            raise LLMClientError(
+                f"Gemini 応答が空でした (finish_reason={finish_reason}). 出力トークン数を減らすか、短く要約してください。"
+            )
+        return "\n".join(texts).strip()
 
 
 def create_llm_client(provider: str, model: str) -> BaseLLMClient:
