@@ -120,7 +120,8 @@ class GeminiClient(BaseLLMClient):
             def builder(max_tokens: int) -> object:
                 return {"max_output_tokens": max_tokens}
         self._generation_config_builder = builder
-        self._model = genai.GenerativeModel(self.model)
+        actual_model_name = self.model if self.model.startswith("models/") else f"models/{self.model}"
+        self._model = genai.GenerativeModel(actual_model_name)
 
     def chat(self, system: str, user: str, max_tokens: int = 1500) -> str:
         """Request a Gemini response and return plain text."""

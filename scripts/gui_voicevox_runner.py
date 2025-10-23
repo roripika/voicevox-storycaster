@@ -19,6 +19,8 @@ import tkinter as tk
 import urllib.error
 import urllib.request
 
+import yaml
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 AUTO_ASSIGN = REPO_ROOT / "scripts" / "auto_assign_voicevox.py"
@@ -27,40 +29,50 @@ ENGINE_START = REPO_ROOT / "bin" / "voicevox-engine-start"
 DEFAULT_OUTPUT_BASE = REPO_ROOT / "output_gui"
 CONFIG_PATH = REPO_ROOT / "config" / "llm_settings.json"
 
-PROVIDER_CHOICES = ["openai", "anthropic", "gemini"]
-MODEL_CHOICES = {
-    "openai": [
-        "gpt-4o-mini",
-        "gpt-4o",
-        "gpt-4.1-mini",
-        "gpt-4.1",
-        "gpt-3.5-turbo",
-    ],
-    "anthropic": [
-        "claude-3-haiku-20240307",
-        "claude-3-sonnet-20240229",
-        "claude-3-opus-20240229",
-    ],
-    "gemini": [
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-pro-latest",
-        "gemini-pro",
-    ],
-}
-PROVIDER_REQUIREMENTS = {
-    "openai": {"packages": ["openai"], "modules": ["openai"], "env_vars": ["OPENAI_API_KEY"]},
-    "anthropic": {"packages": ["anthropic"], "modules": ["anthropic"], "env_vars": ["ANTHROPIC_API_KEY"]},
-    "gemini": {
-        "packages": ["google-generativeai"],
-        "modules": ["google.generativeai"],
-        "env_vars": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
-    },
-}
-PROVIDER_ENV_PRIMARY = {
-    "openai": "OPENAI_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY",
-    "gemini": "GEMINI_API_KEY",
-}
+PROVIDER_CONFIG_PATH = REPO_ROOT / "config" / "llm_providers.yaml"
+
+
+def load_provider_config() -> dict[str, dict[str, object]]:
+    """Load provider settings from YAML, falling back to bundled defaults."""
+    default = {
+        "openai": {
+            "packages": ["openai"],
+            "modules": ["openai"],
+            "env_vars": ["OPENAI_API_KEY"],
+            "models": ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "gpt-3.5-turbo"],
+            "note": "",
+        },
+        "anthropic": {
+            "packages": ["anthropic"],
+            "modules": ["anthropic"],
+            "env_vars": ["ANTHROPIC_API_KEY"],
+            "models": ["claude-3-haiku-20240307", "claude-3-sonnet-20240229", "claude-3-opus-20240229"],
+            "note": "",
+        },
+        "gemini": {
+            "packages": ["google-generativeai"],
+            "modules": ["google.generativeai"],
+            "env_vars": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+            "models": ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-pro", "gemini-1.5-pro-latest"],
+            "note": "無料枠では gemini-2.5-flash / gemini-2.5-flash-lite を利用できます。",
+        },
+    }
+    try:
+        if PROVIDER_CONFIG_PATH.exists():
+            data = yaml.safe_load(PROVIDER_CONFIG_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and isinstance(data.get("providers"), dict):
+                merged = default.copy()
+                for key, value in data["providers"].items():
+                    if isinstance(value, dict):
+                        merged[key] = value
+                return merged
+    except Exception:
+        pass
+    return default
+
+
+PROVIDER_CONFIG = load_provider_config()
+PROVIDER_CHOICES = list(PROVIDER_CONFIG.keys())
 
 
 def safe_name(value: str) -> str:
@@ -72,12 +84,14 @@ def safe_name(value: str) -> str:
 
 def load_settings() -> dict[str, str | dict[str, str]]:
     """Load saved LLM provider/model/API key settings or return defaults."""
-    default_provider = "openai"
-    default_model = "gpt-4o-mini"
+    default_provider = PROVIDER_CHOICES[0] if PROVIDER_CHOICES else "openai"
+    default_models = get_model_choices(default_provider)
+    default_model = default_models[0] if default_models else "gpt-4o-mini"
     default_keys: dict[str, str] = {}
-    for provider, meta in PROVIDER_REQUIREMENTS.items():
+    for provider in PROVIDER_CHOICES:
+        meta = PROVIDER_CONFIG.get(provider, {})
         # Prefer stored key; fall back to environment
-        env_vars = meta.get("env_vars", [])
+        env_vars = meta.get("env_vars", []) if isinstance(meta.get("env_vars"), list) else []
         default_keys[provider] = ""
         for var in env_vars:
             if os.environ.get(var):
@@ -116,12 +130,32 @@ def _is_module_importable(module: str) -> bool:
     return importlib.util.find_spec(module) is not None
 
 
+def get_model_choices(provider: str) -> list[str]:
+    models = PROVIDER_CONFIG.get(provider, {}).get("models", [])
+    return list(models) if isinstance(models, list) else []
+
+
+def get_env_vars(provider: str) -> list[str]:
+    env_vars = PROVIDER_CONFIG.get(provider, {}).get("env_vars", [])
+    return list(env_vars) if isinstance(env_vars, list) else []
+
+
+def get_primary_env(provider: str) -> str:
+    env_vars = get_env_vars(provider)
+    return env_vars[0] if env_vars else ""
+
+
+def get_provider_note(provider: str) -> str:
+    note = PROVIDER_CONFIG.get(provider, {}).get("note", "")
+    return str(note) if note else ""
+
+
 def check_provider_status(provider: str, cached_key: str = "") -> tuple[bool, list[str], bool]:
     """Check whether required packages and API keys exist for the provider."""
-    req = PROVIDER_REQUIREMENTS.get(provider, {})
-    packages = req.get("packages", [])
-    modules = req.get("modules", packages)
-    env_vars = req.get("env_vars", [])
+    meta = PROVIDER_CONFIG.get(provider, {})
+    packages = meta.get("packages", []) if isinstance(meta.get("packages"), list) else []
+    modules = meta.get("modules", []) if isinstance(meta.get("modules"), list) else packages
+    env_vars = meta.get("env_vars", []) if isinstance(meta.get("env_vars"), list) else []
     missing: list[str] = []
     for idx, pkg in enumerate(packages):
         module = modules[idx] if idx < len(modules) else pkg
@@ -162,7 +196,7 @@ class VoicevoxGUI(tk.Tk):
         provider = settings.get("provider", "openai")
         model = settings.get("model", "gpt-4o-mini")
         if provider not in PROVIDER_CHOICES:
-            provider = "openai"
+            provider = PROVIDER_CHOICES[0] if PROVIDER_CHOICES else "openai"
         self.llm_provider = provider
         self.llm_model = model
         self.api_keys = {prov: settings.get("api_keys", {}).get(prov, "") for prov in PROVIDER_CHOICES}
@@ -249,7 +283,7 @@ class VoicevoxGUI(tk.Tk):
             env = os.environ.copy()
             api_key = self.api_keys.get(self.llm_provider, "")
             if api_key:
-                env_vars = PROVIDER_REQUIREMENTS.get(self.llm_provider, {}).get("env_vars", [])
+                env_vars = get_env_vars(self.llm_provider)
                 if env_vars:
                     env[env_vars[0]] = api_key
             self._update_status("auto_assign_voicevox.py を実行しています...")
@@ -329,24 +363,28 @@ class SettingsWindow(tk.Toplevel):
         provider_menu = tk.OptionMenu(self, self.provider_var, *PROVIDER_CHOICES, command=self._on_provider_change)
         provider_menu.grid(row=0, column=1, padx=10, pady=(10, 4), sticky="ew")
 
-        tk.Label(self, text="モデル一覧").grid(row=1, column=0, padx=10, pady=(4, 0), sticky="w")
+        self.note_label = tk.Label(self, text="", fg="#555555", wraplength=380, justify="left")
+        self.note_label.grid(row=1, column=0, columnspan=2, padx=10, pady=(0, 4), sticky="w")
+
+        tk.Label(self, text="モデル一覧").grid(row=2, column=0, padx=10, pady=(4, 0), sticky="w")
         self.model_listbox = tk.Listbox(self, height=6, exportselection=False)
-        self.model_listbox.grid(row=2, column=0, columnspan=2, padx=10, pady=(0, 4), sticky="nsew")
+        self.model_listbox.grid(row=3, column=0, columnspan=2, padx=10, pady=(0, 4), sticky="nsew")
         self.model_listbox.bind("<<ListboxSelect>>", self._on_model_select)
 
-        tk.Label(self, text="モデル（カスタム入力可）").grid(row=3, column=0, padx=10, pady=(4, 0), sticky="w")
-        tk.Entry(self, textvariable=self.model_var, width=35).grid(row=4, column=0, columnspan=2, padx=10, pady=(0, 6), sticky="ew")
+        tk.Label(self, text="モデル（カスタム入力可）").grid(row=4, column=0, padx=10, pady=(4, 0), sticky="w")
+        tk.Entry(self, textvariable=self.model_var, width=35).grid(row=5, column=0, columnspan=2, padx=10, pady=(0, 6), sticky="ew")
 
-        tk.Label(self, text="APIキー").grid(row=5, column=0, padx=10, pady=(4, 0), sticky="w")
+        tk.Label(self, text="APIキー").grid(row=6, column=0, padx=10, pady=(4, 0), sticky="w")
         self.api_entry = tk.Entry(self, width=35)
-        self.api_entry.grid(row=6, column=0, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
+        self.api_entry.grid(row=7, column=0, columnspan=2, padx=10, pady=(0, 10), sticky="ew")
         self.api_entry.bind("<FocusIn>", self._api_focus_in)
         self.api_entry.bind("<FocusOut>", self._api_focus_out)
 
-        btn_frame = tk.Frame(self)
-        btn_frame.grid(row=8, column=0, columnspan=2, pady=10)
         self.status_label = tk.Label(self, text="", fg="#555555")
-        self.status_label.grid(row=7, column=0, columnspan=2, padx=10, pady=(0, 8), sticky="w")
+        self.status_label.grid(row=8, column=0, columnspan=2, padx=10, pady=(0, 8), sticky="w")
+
+        btn_frame = tk.Frame(self)
+        btn_frame.grid(row=9, column=0, columnspan=2, pady=10)
 
         self.install_button = tk.Button(btn_frame, text="必要なパッケージをインストール", command=self._install_missing)
         self.install_button.pack(side="left", padx=5)
@@ -358,12 +396,13 @@ class SettingsWindow(tk.Toplevel):
         self._populate_models(self.provider_var.get())
         self._select_current_model()
         self._update_api_entry()
+        self._update_provider_note()
         self._update_status_and_controls()
 
     def _populate_models(self, provider: str) -> None:
         """Populate the listbox with model choices for the given provider."""
         self.model_listbox.delete(0, tk.END)
-        for model in MODEL_CHOICES.get(provider, []):
+        for model in get_model_choices(provider):
             self.model_listbox.insert(tk.END, model)
 
     def _select_current_model(self) -> None:
@@ -380,12 +419,14 @@ class SettingsWindow(tk.Toplevel):
         provider = self.provider_var.get()
         self._populate_models(provider)
         # Reset selection if current model not in list
-        if self.model_var.get() not in MODEL_CHOICES.get(provider, []):
-            default_list = MODEL_CHOICES.get(provider)
+        models = get_model_choices(provider)
+        if self.model_var.get() not in models:
+            default_list = models
             if default_list:
                 self.model_var.set(default_list[0])
                 self._select_current_model()
         self._update_api_entry()
+        self._update_provider_note()
         self._update_status_and_controls()
 
     def _on_model_select(self, _event) -> None:
@@ -417,9 +458,9 @@ class SettingsWindow(tk.Toplevel):
         if missing_pkgs:
             messages.append("未インストール: " + ", ".join(missing_pkgs))
         if not has_env:
-            req_env = PROVIDER_REQUIREMENTS.get(provider, {}).get("env_vars", [])
-            if req_env:
-                messages.append("APIキー未設定: " + "または".join(req_env))
+            env_vars = get_env_vars(provider)
+            if env_vars:
+                messages.append("APIキー未設定: " + "または".join(env_vars))
         if not messages:
             self.status_label.config(text="必要な依存関係は満たされています。", fg="#2e7d32")
         else:
@@ -429,8 +470,15 @@ class SettingsWindow(tk.Toplevel):
     def _install_missing(self) -> None:
         """Install any missing packages for the selected provider."""
         provider = self.provider_var.get()
-        req = PROVIDER_REQUIREMENTS.get(provider, {})
-        missing_pkgs = [pkg for pkg in req.get("packages", []) if not _is_package_installed(pkg)]
+        meta = PROVIDER_CONFIG.get(provider, {})
+        packages = meta.get("packages", []) if isinstance(meta.get("packages"), list) else []
+        modules = meta.get("modules", []) if isinstance(meta.get("modules"), list) else packages
+        missing_pkgs: list[str] = []
+        for idx, pkg in enumerate(packages):
+            module = modules[idx] if idx < len(modules) else pkg
+            target = module or pkg
+            if target and not _is_module_importable(target):
+                missing_pkgs.append(pkg)
         if not missing_pkgs:
             self._update_status_and_controls()
             return
@@ -448,7 +496,7 @@ class SettingsWindow(tk.Toplevel):
         provider = self.provider_var.get()
         stored_key = self.parent.api_keys.get(provider, "")
         env_fallback = ""
-        for var in PROVIDER_REQUIREMENTS.get(provider, {}).get("env_vars", []):
+        for var in get_env_vars(provider):
             if os.environ.get(var):
                 env_fallback = os.environ[var]
                 break
@@ -481,6 +529,10 @@ class SettingsWindow(tk.Toplevel):
         if self.placeholder_active:
             return ""
         return self.api_entry.get().strip()
+
+    def _update_provider_note(self) -> None:
+        note = get_provider_note(self.provider_var.get())
+        self.note_label.config(text=note)
 
 
 def main() -> None:

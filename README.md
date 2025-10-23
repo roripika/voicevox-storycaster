@@ -70,6 +70,7 @@
 - `prompts/assign_dialogues.md`: LLM に渡す発話割当プロンプト。
 - `config/voice_assignments.yaml`: 手動で配役を定義したい時のテンプレ。自動生成版は `config/voice_assignments_auto.yaml` に出力。
 - `data/voicevox_speaker_profiles.yaml`: 話者プロフィールデータ。マッピングの補助に使用。
+- `config/llm_providers.yaml`: LLMプロバイダごとの依存パッケージ・環境変数・モデル候補・備考を外部管理する設定ファイル。
 
 **コマンドラインでの実行フロー（上級者向け）**
 1. セットアップ（初回のみ）
