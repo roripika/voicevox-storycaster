@@ -24,7 +24,7 @@
 **クイックスタート（初心者向け）**
 1. **環境セットアップ**
    - Finder から `SetupVoicevoxEnvironment.command` をダブルクリック（またはターミナルで `bash scripts/setup_voicevox_environment.sh`）。
-   - Homebrew や依存ツールの導入、Python 仮想環境作成、OpenAI API キー登録、VOICEVOX Engine のインストールまでまとめて行われます。
+   - Homebrew や依存ツールの導入、Python 仮想環境作成、利用したい LLM プロバイダ（OpenAI / Gemini / Anthropic など）の API キー設定、VOICEVOX Engine のインストールまでまとめて行われます。
    - **Windows の場合**:
      1. 管理者 PowerShell で `SetupWSL.ps1` を実行し、WSL + Ubuntu を整備
      2. 同じ場所で `SetupVoicevoxEnvironment_win.ps1` をダブルクリック（または `powershell -ExecutionPolicy Bypass -File SetupVoicevoxEnvironment_win.ps1`）
@@ -50,7 +50,7 @@
 ---
 
 **詳細セットアップとツール一覧（上級者向け）**
-- `scripts/setup_voicevox_environment.sh`: 依存ツール確認・OpenAI キー設定・VOICEVOX Engine インストールまでを自動化。
+- `scripts/setup_voicevox_environment.sh`: 依存ツール確認・LLM API キー設定（OpenAI / Gemini / Anthropic など）・VOICEVOX Engine インストールまでを自動化。
 - `SetupVoicevoxEnvironment.command`: 上記スクリプトを macOS でダブルクリック実行するランチャー。
 - `RunVoicevoxGUI.command`: GUI ランチャー。`.venv` と OpenAI キーを読み込んで `gui_voicevox_runner.py` を起動。
 - `SetupWSL.ps1`: WSL を有効化し必要パッケージを導入する Windows 用補助スクリプト。

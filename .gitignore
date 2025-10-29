@@ -8,11 +8,13 @@ __pycache__/
 # VOICEVOX engine binaries
 .voicevox/
 voicevox_engine/
+voicevox_engine
 
 # Generated outputs
 output/
 output_auto/
 output_gui/
+config/llm_settings.json
 
 # Audio artifacts
 *.wav

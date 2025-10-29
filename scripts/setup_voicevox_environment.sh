@@ -76,6 +76,97 @@ ensure_tool() {
   esac
 }
 
+detect_shell_rc() {
+  local default_rc="${HOME}/.zshrc"
+  case "${SHELL:-}" in
+    */zsh) echo "${HOME}/.zshrc" ;;
+    */bash) echo "${HOME}/.bashrc" ;;
+    *) echo "${default_rc}" ;;
+  esac
+}
+
+escape_single_quotes() {
+  local value="$1"
+  printf "%s" "${value//\'/\'\\\'\'}"
+}
+
+write_env_var_to_rc() {
+  local var_name="$1"
+  local value="$2"
+  local rc_file
+  rc_file=$(detect_shell_rc)
+  if [ ! -f "${rc_file}" ]; then
+    touch "${rc_file}"
+  fi
+  if grep -q "^export ${var_name}=" "${rc_file}"; then
+    local tmp_rc="${rc_file}.tmp"
+    grep -v "^export ${var_name}=" "${rc_file}" > "${tmp_rc}" || true
+    mv "${tmp_rc}" "${rc_file}"
+  fi
+  local escaped_value
+  escaped_value=$(escape_single_quotes "${value}")
+  printf "export %s='%s'\n" "${var_name}" "${escaped_value}" >> "${rc_file}"
+  info "${rc_file} に ${var_name} を追記しました。"
+  info "現在のシェルで利用するには 'source ${rc_file}' を実行してください。"
+}
+
+configure_api_key() {
+  local var_name="$1"
+  local label="$2"
+  local example="$3"
+  local current_value="${!var_name:-}"
+  if [ -n "${current_value}" ]; then
+    info "${label} (${var_name}) は既に環境に設定されています。設定をスキップします。"
+    return
+  fi
+  printf "%s を入力してください (空でスキップ): " "${label}"
+  if [ -n "${example}" ]; then
+    printf "[例: %s] " "${example}"
+  fi
+  read -r -s user_value
+  printf "\n"
+  if [ -z "${user_value}" ]; then
+    info "${label} の設定をスキップしました。"
+    return
+  fi
+  export "${var_name}=${user_value}"
+  write_env_var_to_rc "${var_name}" "${user_value}"
+}
+
+configure_llm_api_keys() {
+  info "LLM プロバイダの API キー設定を行います。必要なものを選択してください。"
+  while true; do
+    cat <<'EOM'
+
+  [1] OpenAI
+  [2] Gemini
+  [3] Anthropic
+  [4] 完了 (設定しない)
+EOM
+    printf "選択肢を入力してください [1-4]: "
+    read -r choice
+    case "${choice}" in
+      1)
+        configure_api_key "OPENAI_API_KEY" "OpenAI API キー (sk- で始まるキー)" "sk-XXXXXXXXXXXXXXXX"
+        ;;
+      2)
+        configure_api_key "GEMINI_API_KEY" "Gemini API キー" "AIza..."
+        ;;
+      3)
+        configure_api_key "ANTHROPIC_API_KEY" "Anthropic API キー" "anthropic-key"
+        ;;
+      4|"")
+        info "API キーの設定を終了します。"
+        break
+        ;;
+      *)
+        warn "無効な選択肢です。1〜4 を入力してください。"
+        ;;
+    esac
+    printf "\n"
+  done
+}
+
 info "== VOICEVOX 環境セットアップ =="
 info "プロジェクトディレクトリ: ${PROJECT_ROOT}"
 
@@ -121,45 +212,7 @@ then
   esac
 fi
 
-# OpenAI API キーの設定
-if [ -n "${OPENAI_API_KEY:-}" ]; then
-  info "OPENAI_API_KEY は既に環境に設定されています。"
-else
-  printf "\nOpenAI API キーを設定しますか？ (sk- で始まるキー). [y/N]: "
-  read -r set_key
-  if [[ "${set_key}" =~ ^[Yy]$ ]]; then
-    printf "入力されたキーは保存され、次回以降自動で読み込まれます。\n"
-    printf "OpenAI API Key を入力してください: "
-    read -r -s user_key
-    printf "\n"
-    if [ -n "${user_key}" ]; then
-      # 推定シェルの rc ファイルを決定
-      DEFAULT_RC="${HOME}/.zshrc"
-      case "${SHELL:-}" in
-        */zsh) RC_FILE="${HOME}/.zshrc" ;;
-        */bash) RC_FILE="${HOME}/.bashrc" ;;
-        *) RC_FILE="${DEFAULT_RC}" ;;
-      esac
-      if [ ! -f "${RC_FILE}" ]; then
-        touch "${RC_FILE}"
-      fi
-      if grep -q "OPENAI_API_KEY" "${RC_FILE}"; then
-        warn "${RC_FILE} に既に OPENAI_API_KEY が記載されています。上書きします。"
-        # remove existing lines referencing key to avoid duplicates
-        tmp_rc="${RC_FILE}.tmp"
-        grep -v "OPENAI_API_KEY" "${RC_FILE}" > "${tmp_rc}" || true
-        mv "${tmp_rc}" "${RC_FILE}"
-      fi
-      printf '\nexport OPENAI_API_KEY=%s\n' "${user_key}" >> "${RC_FILE}"
-      info "${RC_FILE} に OPENAI_API_KEY を追記しました。"
-      info "現在のシェルで利用するには 'source ${RC_FILE}' を実行してください。"
-    else
-      warn "キーが入力されなかったため、設定をスキップしました。"
-    fi
-  else
-    info "OpenAI API キーの設定をスキップしました。後から手動で設定できます。"
-  fi
-fi
+configure_llm_api_keys
 
 # VOICEVOX Engine のインストール
 ENGINE_LINK="${PROJECT_ROOT}/voicevox_engine"
